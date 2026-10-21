@@ -27,6 +27,13 @@ export function roundLoad(value: number, system: UnitSystem): number {
   return value <= 20 ? roundTo(value, 1) : roundTo(value, 2.5);
 }
 
+/** Smallest pickable load at or above `value` (display unit). */
+export function ceilLoad(value: number, system: UnitSystem): number {
+  const eps = 1e-6;
+  if (system === 'metric') return Math.ceil(value / 0.5 - eps) * 0.5;
+  return value <= 20 ? Math.ceil(value - eps) : Math.ceil(value / 2.5 - eps) * 2.5;
+}
+
 /** Load in the display unit, rounded for display ("18 lb" for 8 kg). */
 export function displayLoad(kg: number, system: UnitSystem): number {
   return roundLoad(system === 'metric' ? kg : kgToLb(kg), system);
