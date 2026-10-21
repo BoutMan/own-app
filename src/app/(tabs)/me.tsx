@@ -20,7 +20,8 @@ import {
   Txt,
   type IconName,
 } from '@/components';
-import { mockFeelings, mockGoals, mockSeason, mockToday, mockUser } from '@/content/mock';
+import { mockFeelings, mockGoals, mockToday, mockUser } from '@/content/mock';
+import { useSeasonSummary } from '@/features/season/today';
 import { photos, type PhotoKey } from '@/content/photos';
 import { colors, tones, type Tone } from '@/theme';
 
@@ -43,7 +44,7 @@ const space: { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/re
 
 /** 25 · Me — profile, season, my why, goals, badges, shortcuts, plan. */
 export default function Me() {
-  const s = mockSeason;
+  const s = useSeasonSummary();
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />

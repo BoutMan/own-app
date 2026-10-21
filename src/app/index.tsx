@@ -6,6 +6,8 @@ import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Logo, Txt } from '@/components';
+import { useQuery } from '@/db/DbProvider';
+import { activeSeason } from '@/db/repositories';
 import { photos } from '@/content/photos';
 import { colors } from '@/theme';
 
@@ -15,6 +17,9 @@ const SPLASH_MS = 1800;
 export default function Splash() {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0)).current;
+  // Someone who already trained goes straight to Today (full onboarding persistence: milestone 4).
+  const returning = useQuery((db) => activeSeason(db) !== undefined);
+  const target = returning ? '/(tabs)' : '/welcome';
 
   useEffect(() => {
     const anim = Animated.timing(progress, {
@@ -24,14 +29,13 @@ export default function Splash() {
       useNativeDriver: false,
     });
     anim.start(({ finished }) => {
-      // TODO(milestone 4): route to Today when onboarding is already completed.
-      if (finished) router.replace('/welcome');
+      if (finished) router.replace(target);
     });
     return () => anim.stop();
-  }, [progress]);
+  }, [progress, target]);
 
   return (
-    <Pressable style={styles.root} onPress={() => router.replace('/welcome')} accessibilityLabel="Skip intro">
+    <Pressable style={styles.root} onPress={() => router.replace(target)} accessibilityLabel="Skip intro">
       <StatusBar style="light" />
       <Image source={photos.splashGirl} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition={{ top: '40%', left: '50%' }} />
       <View pointerEvents="none" style={styles.frame} />

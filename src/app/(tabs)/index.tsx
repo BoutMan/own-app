@@ -20,10 +20,11 @@ import {
   Txt,
   WeekStrip,
 } from '@/components';
-import { activityDot, mockToday, mockUser, mockWeek } from '@/content/mock';
+import { activityDot, mockToday, mockUser } from '@/content/mock';
 import { photos } from '@/content/photos';
-import { sessionsForWeek } from '@/domain/programme';
-import { useCurrentWeek } from '@/features/season/currentWeek';
+import { mondayOf } from '@/domain/engine/season';
+import { formatLong } from '@/lib/dates';
+import { useTodayPlan } from '@/features/season/today';
 import { colors } from '@/theme';
 
 const legend = [
@@ -32,13 +33,17 @@ const legend = [
   { label: 'Check-in', color: activityDot.checkIn },
 ] as const;
 
-/** 12 · Today. Static for now: data comes from content/mock until the session engine lands. */
+/** 12 · Today. The session and the +1 come from the programme and the logged sets; rituals, cycle and why are still mock. */
 export default function Today() {
-  const [day, setDay] = useState('mon');
   const t = mockToday;
-  const week = useCurrentWeek();
-  // Monday's session until the schedule is persisted (milestone 4).
-  const session = sessionsForWeek(week)[0]!;
+  const plan = useTodayPlan();
+  const { session, week } = plan;
+  const today = new Date();
+  const hour = today.getHours();
+  const moment = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  const weekDays = thisWeek(today);
+  const [day, setDay] = useState(weekDays.find((d) => d.isToday)?.key ?? weekDays[0]!.key);
+  const adjustment = plan.adjustments[0];
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -75,15 +80,15 @@ export default function Today() {
       <Gutter>
         <View style={{ gap: 4 }}>
           <Txt variant="meta" color={colors.grey}>
-            {t.dateLine}
+            {`${formatLong(today)} · week ${week} of 12`}
           </Txt>
-          <Heading variant="h1" size={34} accent="morning">
-            {`Good morning, ${mockUser.firstName}`}
+          <Heading variant="h1" size={34} accent={moment}>
+            {`Good ${moment}, ${mockUser.firstName}`}
           </Heading>
         </View>
 
         <View style={{ gap: 10 }}>
-          <WeekStrip days={mockWeek} selectedKey={day} onSelect={setDay} />
+          <WeekStrip days={weekDays} selectedKey={day} onSelect={setDay} />
           <View style={styles.legend}>
             {legend.map((l) => (
               <View key={l.label} style={styles.legendItem}>
@@ -96,7 +101,28 @@ export default function Today() {
           </View>
         </View>
 
-        <ToneCard tone="latte" icon="sparkle" eyebrow="Your +1 today" title={t.plusOne.title} text={t.plusOne.text} />
+        {adjustment ? <ToneCard tone="vanilla" icon="leaf" eyebrow={`Week ${week}`} title={adjustment.title} text={adjustment.message} /> : null}
+        {plan.plusOne ? (
+          <ToneCard
+            tone="latte"
+            icon="sparkle"
+            eyebrow="Your +1 today"
+            title={plan.plusOne.title}
+            text={adjustment && plan.plusOneLoad ? `${plan.plusOne.detail} ${adjustment.title}: ${plan.plusOneLoad} today.` : plan.plusOne.detail}
+          />
+        ) : (
+          <ToneCard
+            tone="latte"
+            icon="sparkle"
+            eyebrow="Your +1 today"
+            title={plan.sessionsKept > 0 ? `New moves in ${session.name}` : 'Your first session sets the bar'}
+            text={
+              plan.sessionsKept > 0
+                ? 'First time on these: find your loads today. From next time, we tell you exactly what to beat.'
+                : 'Log your loads and reps: from the next session on, we tell you exactly what to beat.'
+            }
+          />
+        )}
 
         <View style={{ gap: 10 }}>
           <View style={styles.sectionHead}>
@@ -134,6 +160,18 @@ export default function Today() {
       </Gutter>
     </Screen>
   );
+}
+
+// Activity of each weekday until the user's schedule is persisted (milestone 4): Mon/Wed/Fri strength, Sat walk, Sun check-in.
+const PLAN_DOTS = [activityDot.strength, undefined, activityDot.strength, undefined, activityDot.strength, activityDot.zone2, activityDot.checkIn];
+const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+function thisWeek(today: Date) {
+  const monday = mondayOf(today);
+  return WEEKDAY.map((weekday, i) => {
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    return { key: weekday.toLowerCase(), weekday, date: String(d.getDate()), dot: PLAN_DOTS[i], isToday: d.toDateString() === today.toDateString() };
+  });
 }
 
 const styles = StyleSheet.create({

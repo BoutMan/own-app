@@ -6,6 +6,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CircleButton, Heading, Icon, ListGroup, ListRow, Pill, Screen, Switch, Txt, type IconName } from '@/components';
 import { photos } from '@/content/photos';
+import { useDb } from '@/db/DbProvider';
+import { eraseAll } from '@/db/repositories';
 import { colors, photoHeader, radius, tones, type Tone } from '@/theme';
 
 type Place = { icon: IconName; tone: Tone | null; title: string; text: string; items: string[]; never?: boolean };
@@ -27,6 +29,16 @@ const places: Place[] = [
 /** 28 · Data & privacy. */
 export default function Privacy() {
   const [health, setHealth] = useState(true);
+  const [confirmErase, setConfirmErase] = useState(false);
+  const [erased, setErased] = useState(false);
+  const { write } = useDb();
+  // TODO(milestone 5): also delete the vault photo files.
+  const erase = () => {
+    if (!confirmErase) return setConfirmErase(true);
+    write((db) => eraseAll(db));
+    setConfirmErase(false);
+    setErased(true);
+  };
   return (
     <Screen gap={22} contentStyle={{ paddingHorizontal: 20 }}>
       <View style={styles.header}>
@@ -123,9 +135,9 @@ export default function Privacy() {
             </Pressable>
           ))}
         </View>
-        <Pressable accessibilityRole="button" style={styles.delete}>
-          <Txt variant="body" weight={500} color="#A23B2A">
-            Erase all my data
+        <Pressable accessibilityRole="button" onPress={erase} style={[styles.delete, confirmErase && styles.deleteConfirm]}>
+          <Txt variant="body" weight={500} color={confirmErase ? colors.white : '#A23B2A'}>
+            {confirmErase ? 'Tap again: this cannot be undone' : erased ? 'Everything is erased' : 'Erase all my data'}
           </Txt>
         </Pressable>
         <Pressable accessibilityRole="link" style={{ alignSelf: 'center' }}>
@@ -153,5 +165,6 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: 8, marginTop: 4 },
   action: { flex: 1, borderRadius: 22, borderWidth: 1, borderColor: colors.line, padding: 14, gap: 14 },
   actionIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.mist, alignItems: 'center', justifyContent: 'center' },
+  deleteConfirm: { backgroundColor: '#A23B2A', borderColor: '#A23B2A' },
   delete: { height: 52, borderRadius: radius.pill, borderWidth: 1, borderColor: '#E3C8C2', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

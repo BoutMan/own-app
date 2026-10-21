@@ -18,14 +18,13 @@ import {
   ThumbRow,
   Txt,
 } from '@/components';
-import { mockSeason } from '@/content/mock';
 import { photos, type PhotoKey } from '@/content/photos';
 import { blockForWeek, blocks, formatRpe, sessionsForWeek, weekRule, type WeekNumber } from '@/domain/programme';
-import { useCurrentWeek } from '@/features/season/currentWeek';
+import { useSeasonSummary } from '@/features/season/today';
 import { colors, radius, type Tone } from '@/theme';
 
 // Weekday of each session until the user's own schedule is persisted (milestone 4).
-const DAYS = ['Mon', 'Wed', 'Fri'] as const;
+const DAY_OF = { A: 'Mon', B: 'Wed', C: 'Fri' } as const;
 const ROW_STYLE: { tone: Tone; photo: PhotoKey }[] = [
   { tone: 'latte', photo: 'backFlexRed' },
   { tone: 'mauve', photo: 'reverseLunge' },
@@ -33,10 +32,12 @@ const ROW_STYLE: { tone: Tone; photo: PhotoKey }[] = [
 
 /** 16 · Programme — the 12-week season, this week's sessions, blocks to come. */
 export default function Programme() {
-  const s = mockSeason;
-  const week = useCurrentWeek();
+  const s = useSeasonSummary();
+  const week = s.week;
   const block = blockForWeek(week);
-  const [today, ...rest] = sessionsForWeek(week);
+  const today = s.plan.session;
+  const rest = sessionsForWeek(week).filter((x) => x.id !== today.id);
+  const done = s.plan.doneThisWeek;
   const rule = weekRule(week);
   const deloadWeek = block.weeks.find((w) => weekRule(w).phase === 'deload' || weekRule(w).phase === 'test');
   const deload = deloadWeek && deloadWeek > week ? weekRule(deloadWeek as WeekNumber) : undefined;
@@ -95,18 +96,18 @@ export default function Programme() {
             </Txt>
           </View>
 
-          <Pressable accessibilityRole="button" accessibilityLabel={`Start ${today!.name}`} onPress={() => router.push(`/session/${today!.id}`)}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Start ${today.name}`} onPress={() => router.push(`/session/${today.id}`)}>
             <PhotoTile source={photos.greySetStretch} height={210} rounded={24} focus={{ top: '35%', left: '50%' }} />
             <View style={styles.todayPill}>
-              <Pill label="Today" active size="sm" />
+              <Pill label={s.plan.weekComplete ? 'Week done' : 'Today'} active size="sm" />
             </View>
             <View style={styles.todayCard}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="small" color={colors.grey}>{`${today!.letter} · ${DAYS[0]}`}</Txt>
+                <Txt variant="small" color={colors.grey}>{`${today.letter} · ${s.plan.weekComplete ? 'week complete' : 'next up'}`}</Txt>
                 <Txt variant="h2" size={22} style={{ letterSpacing: -0.88 }}>
-                  {today!.name}
+                  {today.name}
                 </Txt>
-                <Txt variant="small" color={colors.grey}>{`${today!.minutes} min · ${today!.focus}`}</Txt>
+                <Txt variant="small" color={colors.grey}>{`${today.minutes} min · ${today.focus}`}</Txt>
               </View>
               <View style={styles.play}>
                 <PlayGlyph />
@@ -120,7 +121,7 @@ export default function Programme() {
               source={photos[ROW_STYLE[i]!.photo]}
               title={session.name}
               text={`${session.minutes} min · ${session.focus}`}
-              right={<Tag label={DAYS[i + 1]!} tone={ROW_STYLE[i]!.tone} weight={600} />}
+              right={<Tag label={done.includes(session.id) ? 'Done' : DAY_OF[session.letter]} tone={ROW_STYLE[i]!.tone} weight={600} />}
               onPress={() => router.push(`/session/${session.id}`)}
             />
           ))}

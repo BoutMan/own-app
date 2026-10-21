@@ -25,12 +25,7 @@ export const mockWeek: readonly WeekDay[] = [
 ];
 
 export const mockToday = {
-  dateLine: 'Monday, Oct 20 · week 3 of 12',
   cyclePill: 'Follicular · good day for heavy',
-  plusOne: {
-    title: 'One more rep on the goblet squat',
-    text: 'Last time: 3 × 11 at 18 lb. Today, 12.',
-  },
   ritualsSummary: '47% of today',
   rituals: [
     { key: 'morning', label: 'Morning flow', detail: '7 / 7 min · done at 7:42', percent: 100, tone: 'vanilla', icon: 'sun', done: true },
@@ -41,19 +36,6 @@ export const mockToday = {
   ],
   myWhy: 'Getting up without that heavy tiredness, and feeling strong again.',
   cycleDay: 9,
-} as const;
-
-export const mockSeason = {
-  number: '01',
-  range: 'Oct 6 → Dec 28',
-  started: 'Oct 6',
-  ends: 'Dec 28',
-  week: 3,
-  weekProgress: 0.15,
-  day: 15,
-  days: 84,
-  sessionsKept: 7,
-  sessionsTotal: 36,
 } as const;
 
 export const mockMarkers = [

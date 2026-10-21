@@ -4,25 +4,34 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { CircleButton, Gutter, Heading, Icon, PhotoHeader, Pill, QuoteCard, Screen, Txt, type IconName } from '@/components';
 import { photos } from '@/content/photos';
+import { useTodayPlan } from '@/features/season/today';
+import type { Variant } from '@/features/session/playable';
 import { tones, type Tone } from '@/theme';
 
-type Case = { key: string; icon: IconName; tone: Tone; title: string; text: string; wide?: boolean };
+type Case = { key: string; variant?: Variant; icon: IconName; tone: Tone; title: string; text: string; wide?: boolean };
 
 // The seven cases of the guide (p. 55), worded as in the mockup.
 const cases: Case[] = [
-  { key: 'away', icon: 'send', tone: 'fog', title: "I'm away for a few days", text: 'Session C with a band, plus a walk' },
-  { key: 'ill', icon: 'ill', tone: 'mauve', title: "I'm ill", text: 'Above the neck: lighter. Below: rest.' },
-  { key: 'period', icon: 'water', tone: 'mocha', title: 'Period pain', text: 'Loads −20 %, core swapped for a walk' },
-  { key: 'short', icon: 'timer', tone: 'latte', title: 'Only 20 minutes', text: 'The first three exercises, in order' },
-  { key: 'packed', icon: 'bars', tone: 'vanilla', title: 'The gym is packed', text: 'Home version of that line, no queue' },
-  { key: 'no-kit', icon: 'home', tone: 'fog', title: 'No equipment', text: 'Bodyweight, 3-1-1 tempo' },
+  { key: 'away', variant: 'away', icon: 'send', tone: 'fog', title: "I'm away for a few days", text: 'Session C with a band, plus a walk' },
+  { key: 'ill', variant: 'ill', icon: 'ill', tone: 'mauve', title: "I'm ill", text: 'Above the neck: lighter. Below: rest.' },
+  { key: 'period', variant: 'period', icon: 'water', tone: 'mocha', title: 'Period pain', text: 'Loads −20 %, core swapped for a walk' },
+  { key: 'short', variant: 'short', icon: 'timer', tone: 'latte', title: 'Only 20 minutes', text: 'The first three exercises, in order' },
+  { key: 'packed', variant: 'packed', icon: 'bars', tone: 'vanilla', title: 'The gym is packed', text: 'Home version of that line, no queue' },
+  { key: 'no-kit', variant: 'noKit', icon: 'home', tone: 'fog', title: 'No equipment', text: 'Bodyweight, 3-1-1 tempo' },
   { key: 'break', icon: 'restart', tone: 'mauve', title: 'I stopped for 2+ weeks', text: 'Restart this block, loads −20 % for a week', wide: true },
 ];
 
 /** 23 · My week is complicated — plan B in one tap. */
 export default function LifeHappens() {
-  // TODO(milestone 3): each case rewrites the session with the rules of the spec's progression engine.
-  const pick = (c: Case) => (c.key === 'break' ? router.navigate('/programme') : router.push('/session/a'));
+  const plan = useTodayPlan();
+  const sessionC = plan.session.block ? `b${plan.session.block}-c` : 'b1-c';
+  // Each case adapts today's session (guide p. 55). A 2+ week break is detected from the logs
+  // (the block restarts by itself), so that card just explains it on the programme.
+  const pick = (c: Case) => {
+    if (c.key === 'break') return router.navigate('/programme');
+    const id = c.key === 'away' ? sessionC : plan.session.id;
+    router.push({ pathname: '/session/[id]', params: { id, variant: c.variant } });
+  };
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />

@@ -5,13 +5,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Gauge, Gutter, Heading, Icon, Logo, PhotoHeader, PhotoTile, Pill, Screen, StatTiles, Txt } from '@/components';
-import { mockMarkers, mockSeason, mockWeekCard } from '@/content/mock';
+import { mockMarkers, mockWeekCard } from '@/content/mock';
+import { useSeasonSummary } from '@/features/season/today';
 import { photos } from '@/content/photos';
 import { colors, radius, tones } from '@/theme';
 
 /** 15 · Progress — glow card, counters, the seven markers against day 0, photo vault. */
 export default function Progress() {
-  const s = mockSeason;
+  const s = useSeasonSummary();
   const w = mockWeekCard;
   const insets = useSafeAreaInsets();
   return (

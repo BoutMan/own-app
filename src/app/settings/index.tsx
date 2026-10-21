@@ -20,6 +20,11 @@ import {
   Txt,
 } from '@/components';
 import { photos } from '@/content/photos';
+import { useDb } from '@/db/DbProvider';
+import { eraseAll } from '@/db/repositories';
+import type { WeekNumber } from '@/domain/programme';
+import { previewToolsEnabled, setPreviewWeek, usePreviewWeek } from '@/features/season/previewWeek';
+import { useSeason } from '@/features/season/currentWeek';
 import { colors, radius, tones } from '@/theme';
 
 /** 26 · Settings. Values are local to the screen until preferences are persisted (milestone 4). */
@@ -169,6 +174,8 @@ export default function Settings() {
         <ListRow tileOnWhite icon="star" tone="vanilla" label="Rate Own" chevron />
       </ListGroup>
 
+      {previewToolsEnabled ? <PreviewTools /> : null}
+
       <View style={styles.footer}>
         <Logo />
         <Txt variant="small" color={colors.grey}>
@@ -176,6 +183,53 @@ export default function Settings() {
         </Txt>
       </View>
     </Screen>
+  );
+}
+
+/** Web preview only: jump to any week and reset the test data. Not shipped in the iOS/Android app. */
+function PreviewTools() {
+  const override = usePreviewWeek();
+  const season = useSeason();
+  const { write } = useDb();
+  const [confirm, setConfirm] = useState(false);
+  return (
+    <View style={{ gap: 10 }}>
+      <SectionLabel>Preview tools</SectionLabel>
+      <Txt variant="meta" color={colors.grey}>
+        {`Simulate a week to see deloads, block 2 and the test week. Now: week ${season.week}${override ? ' (simulated)' : ', from your logged sessions'}.`}
+      </Txt>
+      <View style={styles.weeks}>
+        {Array.from({ length: 12 }, (_, i) => (i + 1) as WeekNumber).map((w) => {
+          const on = override === w;
+          return (
+            <Pressable
+              key={w}
+              accessibilityRole="button"
+              accessibilityLabel={`Simulate week ${w}`}
+              onPress={() => setPreviewWeek(on ? null : w)}
+              style={[styles.weekChip, on && styles.weekChipOn]}
+            >
+              <Txt variant="meta" weight={on ? 600 : 400} color={on ? colors.white : colors.ink}>
+                {String(w)}
+              </Txt>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Button label="Use real week" variant="outline" style={{ flex: 1, height: 44 }} onPress={() => setPreviewWeek(null)} />
+        <Button
+          label={confirm ? 'Tap again to erase' : 'Erase test data'}
+          variant="outline"
+          style={{ flex: 1, height: 44 }}
+          onPress={() => {
+            if (!confirm) return setConfirm(true);
+            write((db) => eraseAll(db));
+            setConfirm(false);
+          }}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -195,4 +249,7 @@ const styles = StyleSheet.create({
   badgeOn: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, backgroundColor: colors.ink, justifyContent: 'center' },
   badgeConnect: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.ink, justifyContent: 'center' },
   footer: { alignItems: 'center', gap: 4, paddingVertical: 20 },
+  weeks: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  weekChip: { width: 44, height: 36, borderRadius: radius.pill, backgroundColor: colors.mist, alignItems: 'center', justifyContent: 'center' },
+  weekChipOn: { backgroundColor: colors.ink },
 });
