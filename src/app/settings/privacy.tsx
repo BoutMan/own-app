@@ -10,18 +10,23 @@ import { colors, photoHeader, radius, tones, type Tone } from '@/theme';
 
 type Place = { icon: IconName; tone: Tone | null; title: string; text: string; items: string[]; never?: boolean };
 
-// Every promise on this screen must hold in the implementation (CLAUDE.md, rules 1 and 2).
+// Every promise on this screen must hold in the implementation (CLAUDE.md, rules 1 and 2):
+// all personal data stays on the device, and the app ships no analytics or tracking SDK.
 const places: Place[] = [
-  { icon: 'phone', tone: 'vanilla', title: 'Only on your phone', text: "We can't see it, even if we wanted to", items: ['Progress photos', 'Photo vault', 'Measurements'] },
-  { icon: 'cloud', tone: 'fog', title: 'In your account, encrypted', text: 'So you never lose a season', items: ['Workouts & loads', 'Cycle', 'Health answers'] },
+  {
+    icon: 'phone', tone: 'vanilla', title: 'Only on your phone', text: "We can't see it, even if we wanted to",
+    items: ['Workouts & loads', 'Health answers', 'Cycle', 'Progress photos', 'Measurements'],
+  },
+  {
+    icon: 'lock', tone: 'fog', title: 'Nothing leaves it', text: 'No server keeps a copy of you',
+    items: ['No analytics', 'No ad trackers', 'No cloud copy'],
+  },
   { icon: 'ban', tone: null, title: 'Never shared with', text: 'Not now, not later, not for a discount', items: ['Advertisers', 'Data brokers', 'Insurers', 'Employers'], never: true },
 ];
 
 /** 28 · Data & privacy. */
 export default function Privacy() {
   const [health, setHealth] = useState(true);
-  const [stats, setStats] = useState(true);
-  const [offers, setOffers] = useState(false);
   return (
     <Screen gap={22} contentStyle={{ paddingHorizontal: 20 }}>
       <View style={styles.header}>
@@ -39,7 +44,7 @@ export default function Privacy() {
           <View style={styles.lockPill}>
             <Icon name="lock" size={13} strokeWidth={2} />
             <Txt variant="small" weight={600}>
-              Encrypted · never sold
+              On your phone · never sold
             </Txt>
           </View>
         </View>
@@ -93,11 +98,11 @@ export default function Privacy() {
           You decide
         </Heading>
         <ListGroup>
-          <ListRow tileOnWhite icon="heart" tone="vanilla" label="Apple Health" detail="Read steps, sleep, cycle" right={<Switch value={health} onChange={setHealth} accessibilityLabel="Apple Health" />} />
-          <ListRow tileOnWhite icon="trend" tone="vanilla" label="Anonymous usage stats" detail="Helps us fix what's clunky" right={<Switch value={stats} onChange={setStats} accessibilityLabel="Anonymous usage stats" />} />
-          <ListRow tileOnWhite icon="card" tone="vanilla" label="Personalised offers" detail="Off by default" right={<Switch value={offers} onChange={setOffers} accessibilityLabel="Personalised offers" />} />
+          <ListRow tileOnWhite icon="heart" tone="vanilla" label="Apple Health" detail="Read on your phone: steps, sleep, cycle" right={<Switch value={health} onChange={setHealth} accessibilityLabel="Apple Health" />} />
+          <ListRow tileOnWhite icon="card" tone="vanilla" label="Your subscription" detail="Handled by the App Store, not by us" />
         </ListGroup>
-        {/* TODO(milestone 5): export, erase and delete are real, irreversible actions behind a confirmation. */}
+        {/* TODO(milestone 5): export (a file the user shares herself), erase and delete are real,
+            irreversible actions behind a confirmation. */}
         <View style={styles.actions}>
           {[
             { icon: 'download' as const, title: 'Export my data', text: 'One file, in minutes' },
@@ -120,7 +125,7 @@ export default function Privacy() {
         </View>
         <Pressable accessibilityRole="button" style={styles.delete}>
           <Txt variant="body" weight={500} color="#A23B2A">
-            Delete my account
+            Erase all my data
           </Txt>
         </Pressable>
         <Pressable accessibilityRole="link" style={{ alignSelf: 'center' }}>

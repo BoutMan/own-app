@@ -54,7 +54,7 @@ export default function Settings() {
             Mia Carter
           </Txt>
           <Txt variant="meta" color={colors.grey}>
-            mia.carter@icloud.com
+            Stored on this phone only
           </Txt>
         </View>
         <Button label="Edit" variant="outline" style={{ height: 34, paddingHorizontal: 14 }} />
@@ -162,15 +162,13 @@ export default function Settings() {
         </View>
       </View>
 
-      <SectionLabel>Account</SectionLabel>
+      <SectionLabel>Privacy & help</SectionLabel>
       <ListGroup>
         <ListRow tileOnWhite icon="lock" tone="vanilla" label="Data & privacy" chevron onPress={() => router.push('/settings/privacy')} />
         <ListRow tileOnWhite icon="chat" tone="vanilla" label="Help & contact" chevron />
         <ListRow tileOnWhite icon="star" tone="vanilla" label="Rate Own" chevron />
       </ListGroup>
 
-      {/* TODO(milestone 4): real sign-out once accounts exist. */}
-      <Button label="Log out" variant="outline" style={{ marginTop: 10 }} onPress={() => router.replace('/')} />
       <View style={styles.footer}>
         <Logo />
         <Txt variant="small" color={colors.grey}>
