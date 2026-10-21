@@ -26,7 +26,8 @@ npm run preview         # builds preview/ — a static web build that runs under
 `preview/` is published as a private claude.ai artifact after each step. On a desktop it shows the app inside an
 iPhone 15-sized frame (390 × 844 pt, simulated notch and safe areas); on a phone it fills the screen. It is the web
 rendering of the React Native code, close to iOS but not identical (fonts, shadows, scroll feel): the App Store build
-comes from the same code through EAS Build.
+comes from the same code through EAS Build. In the preview the database is SQLite compiled to WebAssembly (sql.js),
+saved in the browser; Settings → Preview tools simulates any week and erases the test data.
 
 ## Layout
 
@@ -40,6 +41,7 @@ src/
   components/          design system (PhotoHeader, Pill, CTA, ToneCard, Gauge, …)
   theme/               tokens (copied from design/tokens.ts) + typography helpers
   domain/programme/    the guide's programme as typed data (blocks, sessions, week rules, +1…), with pages
+  domain/engine/       progression engine: +1 rule, load adjustments, season position (pure, tested)
   domain/units.ts      kg ↔ lb, display rounding
   db/                  on-device SQLite (Drizzle schema, repositories); migrations in drizzle/
   features/onboarding/ answers context, schedule rules, onboarding-only UI (StepScreen, SignaturePad…)
@@ -64,6 +66,6 @@ scripts/build-preview  web preview builder
   - [x] 26 Settings, 27 Subscription, 28 Data & privacy
   - V1/V2 screens (19 Evening wind-down, 20 Cycle, 24 Glow card, 29 Circle) are placeholders
 - [x] Milestone 2 — data model + programme content from the PDF (see docs/programme-notes.md)
-- [ ] Milestone 3 — session engine (+1 rule, deloads) with unit tests
+- [x] Milestone 3 — session engine: logged sets, +1 rule, deloads, missed weeks, plan B (src/domain/engine, tested)
 - [ ] Milestone 4 — persisted onboarding + paywall (RevenueCat)
 - [ ] Milestone 5 — local reminders, Sunday check-in, block reviews, photo vault
