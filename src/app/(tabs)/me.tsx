@@ -1,12 +1,207 @@
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, Placeholder } from '@/components';
+import {
+  Button,
+  CircleButton,
+  Gauge,
+  Gutter,
+  Heading,
+  Icon,
+  Logo,
+  PhotoHeader,
+  PhotoTile,
+  Pill,
+  QuoteCard,
+  Screen,
+  SeasonBar,
+  StatTiles,
+  Txt,
+  type IconName,
+} from '@/components';
+import { mockFeelings, mockGoals, mockSeason, mockToday, mockUser } from '@/content/mock';
+import { photos, type PhotoKey } from '@/content/photos';
+import { colors, tones, type Tone } from '@/theme';
 
-/** 25 · Me. */
+type Badge = { label: string; earned: boolean; tone?: Tone; icon?: IconName; count?: string };
+
+// Badges are V1: shown with mock state so the layout is in place.
+const badges: Badge[] = [
+  { label: 'First week', earned: true, tone: 'vanilla', icon: 'star' },
+  { label: 'Never missed twice', earned: true, tone: 'mauve', icon: 'repeat' },
+  { label: '3 to go', earned: false, count: '10' },
+  { label: 'Full season', earned: false, icon: 'lock' },
+];
+
+const space: { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/review/1' | '/my-contract'; lock?: boolean }[] = [
+  { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
+  { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
+  { label: `My cycle · day ${mockToday.cycleDay}`, photo: 'iceSkincare', href: '/cycle' },
+  { label: 'My circle · 8', photo: 'streetAbsMatcha', href: '/circle' },
+];
+
+/** 25 · Me — profile, season, my why, goals, badges, shortcuts, plan. */
 export default function Me() {
+  const s = mockSeason;
   return (
-    <Placeholder title="Me" accent="Me" screen="25">
-      {__DEV__ ? <Button label="Open kitchen sink" variant="outline" onPress={() => router.push('/dev/kitchen-sink')} /> : null}
-    </Placeholder>
+    <Screen padTop={false}>
+      <StatusBar style="light" />
+      <PhotoHeader
+        source={photos.morningWalk}
+        height={440}
+        focus={{ top: '30%', left: '50%' }}
+        top={
+          <>
+            <Logo color={colors.white} />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <CircleButton icon="share" surface="white" accessibilityLabel="Share my profile" />
+              <CircleButton icon="settings" surface="white" accessibilityLabel="Settings" onPress={() => router.push('/settings')} />
+            </View>
+          </>
+        }
+      >
+        <Pill label={`Season ${s.number} · week ${s.week} of 12`} dot size="sm" />
+        <View style={styles.nameRow}>
+          <View style={{ gap: 6, flex: 1 }}>
+            <Heading variant="heroXL" on="photo" style={{ letterSpacing: -4.16, lineHeight: 58 }}>
+              {mockUser.firstName}
+            </Heading>
+            <Txt variant="body" size={14} color="rgba(255,255,255,0.9)">
+              {mockFeelings.join(' · ')}
+            </Txt>
+          </View>
+          <Button label="Edit profile" variant="ghost" style={{ height: 36, paddingHorizontal: 14 }} onPress={() => router.push('/settings')} />
+        </View>
+      </PhotoHeader>
+
+      <Gutter>
+        <View style={styles.seasonCard}>
+          <View style={styles.rowBetween}>
+            <Heading variant="h2" size={20} accent={s.number}>
+              {`Season ${s.number}`}
+            </Heading>
+            <Txt variant="meta" color={colors.grey}>{`Day ${s.day} of ${s.days}`}</Txt>
+          </View>
+          <SeasonBar weeksDone={s.week - 1} currentWeekProgress={s.weekProgress} />
+          <View style={styles.rowBetween}>
+            {[`Started ${s.started}`, 'Block 1 · Foundations', `Ends ${s.ends}`].map((l) => (
+              <Txt key={l} variant="small" color={colors.grey}>
+                {l}
+              </Txt>
+            ))}
+          </View>
+        </View>
+
+        <StatTiles
+          stats={[
+            { value: String(s.sessionsKept), label: 'sessions kept', tone: 'vanilla' },
+            { value: '4h12', label: 'just for me', tone: 'mauve' },
+            { value: '12', label: 'active days', tone: 'fog' },
+          ]}
+        />
+
+        <QuoteCard quote={mockToday.myWhy} caption={`My why · ${s.started}`} actionLabel="Rewrite" />
+
+        <View style={{ gap: 10 }}>
+          <View style={styles.rowBetween}>
+            <Heading variant="h2" accent="goals">
+              My goals
+            </Heading>
+            <Txt variant="meta" color={colors.grey}>
+              3 for this season
+            </Txt>
+          </View>
+          {mockGoals.map((g) => (
+            <Gauge key={g.label} label={g.label} detail={g.detail} percent={g.percent} tone={g.tone} icon={g.icon} />
+          ))}
+        </View>
+
+        <View style={{ gap: 12 }}>
+          <View style={styles.rowBetween}>
+            <Heading variant="h2" accent="badges">
+              My badges
+            </Heading>
+            <Txt variant="meta" color={colors.grey}>
+              2 of 12
+            </Txt>
+          </View>
+          <View style={styles.badges}>
+            {badges.map((b) => (
+              <View key={b.label} style={styles.badge}>
+                <View
+                  style={[
+                    styles.badgeCircle,
+                    b.earned && b.tone
+                      ? { backgroundColor: tones[b.tone].bg, borderWidth: 1.5, borderColor: tones[b.tone].ring }
+                      : styles.badgeLocked,
+                  ]}
+                >
+                  {b.count ? (
+                    <Txt variant="h2" size={20} color="#9A948D">
+                      {b.count}
+                    </Txt>
+                  ) : b.icon ? (
+                    <Icon name={b.icon} size={22} strokeWidth={1.7} color={b.earned && b.tone ? tones[b.tone].strong : '#9A948D'} />
+                  ) : null}
+                </View>
+                <Txt variant="small" weight={b.earned ? 600 : 400} color={b.earned ? colors.ink : colors.grey} style={{ textAlign: 'center' }}>
+                  {b.label}
+                </Txt>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={{ gap: 12 }}>
+          <Heading variant="h2" accent="space">
+            My space
+          </Heading>
+          <View style={styles.grid}>
+            {space.map((t) => (
+              <PhotoTile
+                key={t.label}
+                source={photos[t.photo]}
+                label={t.label}
+                height={132}
+                style={styles.gridItem}
+                onPress={() => router.push(t.href)}
+              />
+            ))}
+          </View>
+        </View>
+
+        <Pressable accessibilityRole="button" onPress={() => router.push('/settings/subscription')} style={styles.plan}>
+          <View style={styles.planLogo}>
+            <Txt variant="logo" size={15} color={colors.white}>
+              o.
+            </Txt>
+          </View>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="bodyStrong">Own Yearly</Txt>
+            <Txt variant="small" color={colors.grey}>
+              Free trial · ends Nov 2
+            </Txt>
+          </View>
+          <Icon name="chevronRight" size={14} strokeWidth={2} color={colors.grey} />
+        </Pressable>
+
+        {__DEV__ ? <Button label="Open kitchen sink (dev)" variant="outline" onPress={() => router.push('/dev/kitchen-sink')} /> : null}
+      </Gutter>
+    </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
+  seasonCard: { borderRadius: 24, borderWidth: 1, borderColor: colors.line, paddingVertical: 16, paddingHorizontal: 18, gap: 12 },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  badges: { flexDirection: 'row', gap: 8 },
+  badge: { flex: 1, alignItems: 'center', gap: 6 },
+  badgeCircle: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center' },
+  badgeLocked: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.radioOff },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  gridItem: { width: '48.8%' },
+  plan: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 22, backgroundColor: colors.mist },
+  planLogo: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
+});

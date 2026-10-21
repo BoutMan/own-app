@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
+import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import {
   Button,
@@ -43,7 +44,9 @@ export default function Today() {
         top={
           <>
             <Logo color={colors.white} />
-            <Image source={photos.morningWalk} style={styles.avatar} contentPosition={{ top: '20%', left: '50%' }} accessibilityLabel="Profile" />
+            <Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={() => router.navigate('/me')}>
+              <Image source={photos.morningWalk} style={styles.avatar} contentPosition={{ top: '20%', left: '50%' }} />
+            </Pressable>
           </>
         }
       >
@@ -58,8 +61,9 @@ export default function Today() {
           {t.sessionMeta}
         </Txt>
         <View style={styles.heroActions}>
-          <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} />
-          <Button label="10-min version" variant="ghost" />
+          <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} onPress={() => router.push('/session/a')} />
+          {/* TODO(milestone 3): real 10-minute version from the "My week is complicated" rules. */}
+          <Button label="10-min version" variant="ghost" onPress={() => router.push('/session/a')} />
         </View>
       </PhotoHeader>
 
@@ -116,8 +120,8 @@ export default function Today() {
             Coming up
           </Heading>
           <View style={styles.tiles}>
-            <PhotoTile source={photos.matchaBowl} label="Sunday check-in" height={150} focus={{ top: '40%', left: '50%' }} style={{ flex: 1 }} />
-            <PhotoTile source={photos.iceSkincare} label={`Cycle · day ${t.cycleDay}`} height={150} style={{ flex: 1 }} />
+            <PhotoTile source={photos.matchaBowl} label="Sunday check-in" height={150} focus={{ top: '40%', left: '50%' }} style={{ flex: 1 }} onPress={() => router.push('/check-in')} />
+            <PhotoTile source={photos.iceSkincare} label={`Cycle · day ${t.cycleDay}`} height={150} style={{ flex: 1 }} onPress={() => router.push('/cycle')} />
           </View>
         </View>
 
