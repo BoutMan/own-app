@@ -21,8 +21,10 @@ On a phone: install **Expo Go**, scan the QR code printed by `npx expo start` (s
 npm run preview         # builds preview/ — a static web build that runs under any sub-path
 ```
 
-`preview/` is published as a private claude.ai artifact after each step. It is the web rendering of the
-React Native code, close to iOS but not identical (fonts, shadows, scroll feel): check on a device before release.
+`preview/` is published as a private claude.ai artifact after each step. On a desktop it shows the app inside an
+iPhone 15-sized frame (390 × 844 pt, simulated notch and safe areas); on a phone it fills the screen. It is the web
+rendering of the React Native code, close to iOS but not identical (fonts, shadows, scroll feel): the App Store build
+comes from the same code through EAS Build.
 
 ## Layout
 
@@ -48,12 +50,13 @@ scripts/build-preview  web preview builder
 
 - [x] Milestone 0 — foundations: Expo + Router, tokens, Instrument Sans, components, kitchen sink
 - [x] First screens: 01 Splash, 02 Welcome, 12 Today (static mock data), tab bar
-- [ ] Milestone 1 — MVP static screens + full navigation
+- [x] Milestone 1 — MVP static screens + full navigation
   - [x] First launch: onboarding 1–7 (03–09), 10 Your season is ready, 11 Paywall
   - [x] Tabs: 16 Programme, 15 Progress, 25 Me
   - [x] Session: 13 Guided session (runs session A from the guide p. 27), 14 Session complete
-  - [ ] 17 Library, 18 Exercise detail, 21 Sunday check-in, 22 Block review, 23 My week is complicated
-  - [ ] 26 Settings, 27 Subscription, 28 Data & privacy
+  - [x] 17 Library (the 35 cards of the guide), 18 Exercise detail, 21 Sunday check-in, 22 Block review, 23 My week is complicated
+  - [x] 26 Settings, 27 Subscription, 28 Data & privacy
+  - V1/V2 screens (19 Evening wind-down, 20 Cycle, 24 Glow card, 29 Circle) are placeholders
 - [ ] Milestone 2 — data model + programme content from the PDF
 - [ ] Milestone 3 — session engine (+1 rule, deloads) with unit tests
 - [ ] Milestone 4 — persisted onboarding + paywall (RevenueCat)
