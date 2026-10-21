@@ -7,7 +7,7 @@
  *  1. rewrites absolute asset/chunk URLs to relative ones,
  *  2. pins a <base> to the page's own folder and resets the path to "/" before the bundle boots,
  *  3. renames `_expo/`, `_`-prefixed and `[param]` chunks (names the preview host rejects),
- *  4. centres the app in a phone-width column on desktop.
+ *  4. shows the app full screen on phones and inside an iPhone-sized frame on desktop.
  *
  * Usage: node scripts/build-preview.mjs
  */
@@ -69,11 +69,23 @@ if (scripts.length === 0) throw new Error('No bundle scripts found in index.html
 const page = `<title>Own App Preview</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
-  :root { --bg: #E9E7E4; --app: #FFFFFF; color-scheme: light; }
+  /* Phones: the app fills the screen. Desktop: an iPhone 15-sized frame (390 × 844 pt), scaled to fit. */
+  :root { --bg: #E9E7E4; --app: #FFFFFF; --bezel: #161515; color-scheme: light; }
   html, body { height: 100%; }
   body { margin: 0; overflow: hidden; background: var(--bg); }
-  #root { display: flex; flex: 1; height: 100%; max-width: 430px; margin: 0 auto; background: var(--app); }
-  @media (min-width: 600px) { #root { box-shadow: 0 0 0 1px rgba(17,17,17,0.06), 0 20px 60px rgba(17,17,17,0.12); } }
+  .phone { position: relative; height: 100%; background: var(--app); }
+  #root { display: flex; height: 100%; }
+  .island { display: none; }
+  .phone-frame body { display: flex; align-items: center; justify-content: center; }
+  .phone-frame .phone {
+    flex: none; width: 390px; height: 844px; border-radius: 55px; overflow: hidden;
+    box-shadow: 0 0 0 12px var(--bezel), 0 0 0 13px #3a3836, 0 30px 80px rgba(17,17,17,0.25);
+    transform-origin: center; transform: scale(var(--scale, 1));
+  }
+  .phone-frame .island {
+    display: block; position: absolute; z-index: 10; top: 11px; left: 50%; width: 124px; height: 36px;
+    margin-left: -62px; border-radius: 20px; background: var(--bezel); pointer-events: none;
+  }
 </style>
 <script>
   (function () {
@@ -81,10 +93,22 @@ const page = `<title>Own App Preview</title>
     base.href = new URL('./', location.href).href;
     document.head.appendChild(base);
     try { history.replaceState(null, '', '/'); } catch (e) {}
+    // Wide screens get the device frame; the app reads this flag to simulate iPhone safe areas.
+    var framed = window.matchMedia('(min-width: 600px)').matches;
+    window.__OWN_PREVIEW_FRAME__ = framed;
+    if (framed) {
+      document.documentElement.classList.add('phone-frame');
+      var fit = function () {
+        var scale = Math.min(1, (window.innerHeight - 48) / 870, (window.innerWidth - 48) / 416);
+        document.documentElement.style.setProperty('--scale', String(Math.max(0.5, scale)));
+      };
+      fit();
+      window.addEventListener('resize', fit);
+    }
   })();
 </script>
 <noscript>This preview needs JavaScript.</noscript>
-<div id="root"></div>
+<div class="phone"><div class="island"></div><div id="root"></div></div>
 ${scripts.map((s) => `<script src="${s}" defer></script>`).join('\n')}
 `;
 writeFileSync(join(out, 'index.html'), page);
