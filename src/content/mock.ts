@@ -45,3 +45,47 @@ export const mockToday = {
   myWhy: 'Getting up without that heavy tiredness, and feeling strong again.',
   cycleDay: 9,
 } as const;
+
+export const mockSeason = {
+  number: '01',
+  range: 'Oct 6 → Dec 28',
+  started: 'Oct 6',
+  ends: 'Dec 28',
+  week: 3,
+  weekProgress: 0.15,
+  day: 15,
+  days: 84,
+  sessionsKept: 7,
+  sessionsTotal: 36,
+} as const;
+
+export const mockWeekSessions = [
+  { key: 'b', name: 'Hinge', text: '35 min · posterior chain & pull', day: 'Wed', tone: 'latte', photo: 'backFlexRed' },
+  { key: 'c', name: 'Full circuit', text: '30 min · 3 rounds of 40/20', day: 'Fri', tone: 'mauve', photo: 'reverseLunge' },
+  { key: 'walk', name: 'Zone 2 walk', text: '30–45 min · the sentence test', day: 'Sat', tone: 'fog', photo: 'trackStretch' },
+] as const;
+
+export const mockMarkers = [
+  { label: 'Energy', icon: 'bolt', tone: 'vanilla', day0: 4, now: 6 },
+  { label: 'Sleep', icon: 'moon', tone: 'fog', day0: 5, now: 7 },
+  { label: 'Strength', icon: 'dumbbell', tone: 'latte', day0: 3, now: 6 },
+  { label: 'Breath', icon: 'breath', tone: 'fog', day0: 4, now: 5 },
+  { label: 'Posture & back', icon: 'posture', tone: 'mauve', day0: 5, now: 6 },
+  { label: 'Mood', icon: 'smile', tone: 'vanilla', day0: 5, now: 7 },
+  { label: 'Confidence', icon: 'crown', tone: 'mauve', day0: 3, now: 5 },
+] as const;
+
+export const mockWeekCard = {
+  title: 'week three',
+  accent: 'three',
+  range: 'oct 6 → oct 26',
+  lines: ['7 sessions kept', 'Squat 9 → 18 lb', 'Sleep 5 → 7 / 10', 'Never missed twice'],
+} as const;
+
+export const mockGoals = [
+  { label: '10 push-ups from my knees', detail: '7 / 10 · +3 since week 1', percent: 70, tone: 'vanilla', icon: 'dumbbell' },
+  { label: 'Four flights without stopping', detail: '3 / 4 flights', percent: 75, tone: 'fog', icon: 'stairs' },
+  { label: 'My black jeans fit again', detail: 'almost there', percent: 60, tone: 'mauve', icon: 'jeans' },
+] as const;
+
+export const mockFeelings = ['Strong', 'Rested', 'Confident'] as const;

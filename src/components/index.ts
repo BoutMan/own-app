@@ -16,3 +16,6 @@ export { TabBar } from './TabBar';
 export { ToneCard } from './ToneCard';
 export { Heading, Txt } from './Txt';
 export { Placeholder } from './Placeholder';
+export { LinkRow, ThumbRow } from './Rows';
+export { SeasonBar } from './SeasonBar';
+export { Tag } from './Tag';

@@ -10,14 +10,16 @@ type SegmentedControlProps<T extends string> = {
   onChange: (value: T) => void;
   /** Background the control sits on: white track on mist rows, mist track on white screens. */
   surface?: 'white' | 'mist';
+  /** Full-width variant with equal 40px segments (guided session). */
+  stretch?: boolean;
 };
 
 /** Pill track with a black active segment (Home / Gym, lb / kg). */
-export function SegmentedControl<T extends string>({ options, value, onChange, surface = 'mist' }: SegmentedControlProps<T>) {
+export function SegmentedControl<T extends string>({ options, value, onChange, surface = 'mist', stretch }: SegmentedControlProps<T>) {
   return (
     <View
       accessibilityRole="tablist"
-      style={[styles.track, { backgroundColor: surface === 'mist' ? colors.white : colors.mist }]}
+      style={[styles.track, { backgroundColor: surface === 'mist' ? colors.white : colors.mist }, stretch && { padding: 4 }]}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -27,9 +29,9 @@ export function SegmentedControl<T extends string>({ options, value, onChange, s
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             onPress={() => onChange(o.value)}
-            style={[styles.segment, active && styles.segmentActive]}
+            style={[styles.segment, stretch && styles.segmentStretch, active && styles.segmentActive]}
           >
-            <Txt variant="meta" color={active ? colors.white : colors.grey}>
+            <Txt variant="meta" size={stretch ? 14 : 13} weight={stretch && active ? 500 : 400} color={active ? colors.white : colors.grey}>
               {o.label}
             </Txt>
           </Pressable>
@@ -59,6 +61,7 @@ export function Switch({ value, onChange, accessibilityLabel }: SwitchProps) {
 const styles = StyleSheet.create({
   track: { flexDirection: 'row', borderRadius: radius.pill, padding: 3 },
   segment: { paddingVertical: 5, paddingHorizontal: 12, borderRadius: radius.pill },
+  segmentStretch: { flex: 1, height: 40, alignItems: 'center', justifyContent: 'center' },
   segmentActive: { backgroundColor: colors.ink },
   switch: {
     width: size.switchW,

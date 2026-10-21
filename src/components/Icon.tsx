@@ -43,6 +43,48 @@ const glyphs = {
     </>
   ),
   dumbbell: <Path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12" />,
+  grid: (
+    <>
+      <Rect x={4} y={4} width={7} height={7} rx={1.5} />
+      <Rect x={13} y={4} width={7} height={7} rx={1.5} />
+      <Rect x={4} y={13} width={7} height={7} rx={1.5} />
+      <Rect x={13} y={13} width={7} height={7} rx={1.5} />
+    </>
+  ),
+  timer: (
+    <>
+      <Circle cx={12} cy={13} r={8} />
+      <Path d="M12 9v4l2 2M10 2h4" />
+    </>
+  ),
+  leaf: <Path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14zM5 19l7-7" />,
+  crown: <Path d="M4 18h16M5 18l-1-10 5 4 3-6 3 6 5-4-1 10" />,
+  lock: (
+    <>
+      <Rect x={5} y={11} width={14} height={10} rx={2} />
+      <Path d="M8 11V8a4 4 0 018 0v3" />
+    </>
+  ),
+  bolt: <Path d="M13 3L5 13h6l-1 8 8-10h-6z" />,
+  breath: <Path d="M3 9h11a3 3 0 10-3-3M3 15h15a3 3 0 11-3 3M3 12h7" />,
+  posture: <Path d="M12 3v18M9 6h6M9 10h6M9 14h6M9 18h6" />,
+  smile: (
+    <>
+      <Circle cx={12} cy={12} r={8.5} />
+      <Path d="M8.5 14a4 4 0 007 0M9 9.5h.01M15 9.5h.01" />
+    </>
+  ),
+  stairs: <Path d="M3 20h5v-5h5v-5h5V5h3" />,
+  jeans: <Path d="M7 3h10l1 18h-5l-1-10-1 10H6z" />,
+  star: <Path d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z" />,
+  repeat: <Path d="M17 3l3 3-3 3M20 6H9a5 5 0 00-5 5M7 21l-3-3 3-3M4 18h11a5 5 0 005-5" />,
+  volume: <Path d="M4 9v6h4l5 4V5L8 9zM17 9a4 4 0 010 6" />,
+  settings: (
+    <>
+      <Circle cx={12} cy={12} r={3} />
+      <Path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-2.7-1.1l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H3a2 2 0 110-4h.1a1.6 1.6 0 001.1-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-1.1V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1.3z" />
+    </>
+  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof glyphs;
