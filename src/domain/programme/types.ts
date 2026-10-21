@@ -90,6 +90,8 @@ export type Block = {
   name: string;
   weeks: readonly [WeekNumber, WeekNumber, WeekNumber, WeekNumber];
   intention: string;
+  /** One-line summary used in lists (mockup copy). */
+  summary: string;
   realGoal: string;
   loadInstruction: string;
   rpe: Rpe;

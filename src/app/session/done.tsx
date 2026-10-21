@@ -6,16 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, CircleButton, Gutter, Heading, Pill, PhotoHeader, Screen, StatTiles, ToneCard, Txt } from '@/components';
 import { photos } from '@/content/photos';
-import { sessionA } from '@/content/sessionA';
+import { getSession } from '@/domain/programme';
 import { colors, radius } from '@/theme';
 
 /** 14 · Session complete — stats, the +1 earned, how it felt. */
 export default function SessionComplete() {
-  const params = useLocalSearchParams<{ minutes?: string; exercises?: string }>();
+  const params = useLocalSearchParams<{ id?: string; minutes?: string }>();
+  const session = getSession(params.id ?? '') ?? getSession('b1-a')!;
   const insets = useSafeAreaInsets();
   const [feel, setFeel] = useState<number | null>(null);
   const minutes = params.minutes ?? '34';
-  const exercises = params.exercises ?? String(sessionA.exercises.length);
+  const exercises = String(session.exercises.length);
   const goHome = () => router.replace('/(tabs)');
 
   return (
@@ -36,7 +37,7 @@ export default function SessionComplete() {
           }
         >
           <Txt variant="eyebrow" color="rgba(255,255,255,0.88)" style={{ letterSpacing: 1.44 }}>
-            {`${sessionA.name} · today`}
+            {`${session.name} · today`}
           </Txt>
           <Heading variant="hero" size={60} on="photo" accent="kept." style={{ letterSpacing: -3.6, lineHeight: 55 }}>
             Promise kept.

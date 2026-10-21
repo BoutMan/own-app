@@ -18,14 +18,29 @@ import {
   ThumbRow,
   Txt,
 } from '@/components';
-import { mockSeason, mockWeekSessions } from '@/content/mock';
-import { photos } from '@/content/photos';
-import { sessionA } from '@/content/sessionA';
-import { colors, radius } from '@/theme';
+import { mockSeason } from '@/content/mock';
+import { photos, type PhotoKey } from '@/content/photos';
+import { blockForWeek, blocks, formatRpe, sessionsForWeek, weekRule, type WeekNumber } from '@/domain/programme';
+import { useCurrentWeek } from '@/features/season/currentWeek';
+import { colors, radius, type Tone } from '@/theme';
+
+// Weekday of each session until the user's own schedule is persisted (milestone 4).
+const DAYS = ['Mon', 'Wed', 'Fri'] as const;
+const ROW_STYLE: { tone: Tone; photo: PhotoKey }[] = [
+  { tone: 'latte', photo: 'backFlexRed' },
+  { tone: 'mauve', photo: 'reverseLunge' },
+];
 
 /** 16 · Programme — the 12-week season, this week's sessions, blocks to come. */
 export default function Programme() {
   const s = mockSeason;
+  const week = useCurrentWeek();
+  const block = blockForWeek(week);
+  const [today, ...rest] = sessionsForWeek(week);
+  const rule = weekRule(week);
+  const deloadWeek = block.weeks.find((w) => weekRule(w).phase === 'deload' || weekRule(w).phase === 'test');
+  const deload = deloadWeek && deloadWeek > week ? weekRule(deloadWeek as WeekNumber) : undefined;
+  const nextBlocks = blocks.filter((b) => b.number > block.number);
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -55,16 +70,16 @@ export default function Programme() {
       <Gutter>
         <View style={styles.blockCard}>
           <View style={styles.rowBetween}>
-            <Heading variant="h2" size={20} accent="1">
-              Block 1 · Foundations
+            <Heading variant="h2" size={20} accent={String(block.number)}>
+              {`Block ${block.number} · ${block.name}`}
             </Heading>
-            <Txt variant="meta" color={colors.grey}>{`Week ${s.week}`}</Txt>
+            <Txt variant="meta" color={colors.grey}>{`Week ${week}`}</Txt>
           </View>
-          <SeasonBar weeksDone={s.week - 1} currentWeekProgress={s.weekProgress} />
+          <SeasonBar weeksDone={week - 1} currentWeekProgress={s.weekProgress} />
           <View style={styles.rowBetween}>
-            {['Foundations', 'Building', 'Glow'].map((b) => (
-              <Txt key={b} variant="small" color={colors.grey}>
-                {b}
+            {blocks.map((b) => (
+              <Txt key={b.number} variant="small" color={b.number === block.number ? colors.ink : colors.grey}>
+                {b.name}
               </Txt>
             ))}
           </View>
@@ -76,22 +91,22 @@ export default function Programme() {
               This week
             </Heading>
             <Txt variant="meta" color={colors.grey}>
-              3 sets · RPE 7
+              {`${rule.maxSets ? `${rule.maxSets} sets` : 'Full sets'} · ${formatRpe(rule.rpe ?? block.rpe)}`}
             </Txt>
           </View>
 
-          <Pressable accessibilityRole="button" accessibilityLabel={`Start ${sessionA.name}`} onPress={() => router.push('/session/a')}>
+          <Pressable accessibilityRole="button" accessibilityLabel={`Start ${today!.name}`} onPress={() => router.push(`/session/${today!.id}`)}>
             <PhotoTile source={photos.greySetStretch} height={210} rounded={24} focus={{ top: '35%', left: '50%' }} />
             <View style={styles.todayPill}>
               <Pill label="Today" active size="sm" />
             </View>
             <View style={styles.todayCard}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="small" color={colors.grey}>{`${sessionA.letter} · Mon`}</Txt>
+                <Txt variant="small" color={colors.grey}>{`${today!.letter} · ${DAYS[0]}`}</Txt>
                 <Txt variant="h2" size={22} style={{ letterSpacing: -0.88 }}>
-                  {sessionA.name}
+                  {today!.name}
                 </Txt>
-                <Txt variant="small" color={colors.grey}>{`${sessionA.minutes} min · ${sessionA.summary}`}</Txt>
+                <Txt variant="small" color={colors.grey}>{`${today!.minutes} min · ${today!.focus}`}</Txt>
               </View>
               <View style={styles.play}>
                 <PlayGlyph />
@@ -99,9 +114,22 @@ export default function Programme() {
             </View>
           </Pressable>
 
-          {mockWeekSessions.map((w) => (
-            <ThumbRow key={w.key} source={photos[w.photo]} title={w.name} text={w.text} right={<Tag label={w.day} tone={w.tone} weight={600} />} />
+          {rest.map((session, i) => (
+            <ThumbRow
+              key={session.id}
+              source={photos[ROW_STYLE[i]!.photo]}
+              title={session.name}
+              text={`${session.minutes} min · ${session.focus}`}
+              right={<Tag label={DAYS[i + 1]!} tone={ROW_STYLE[i]!.tone} weight={600} />}
+              onPress={() => router.push(`/session/${session.id}`)}
+            />
           ))}
+          <ThumbRow
+            source={photos.trackStretch}
+            title="Zone 2 walk"
+            text={`30–45 min · ${block.cardioPerWeek > 1 ? `${block.cardioPerWeek} a week` : 'the sentence test'}`}
+            right={<Tag label="Sat" tone="fog" weight={600} />}
+          />
 
           <LinkRow icon="timer" title="My week is complicated" text="Travel, period pain, 20 minutes: we adapt" onPress={() => router.push('/life-happens')} />
         </View>
@@ -110,9 +138,25 @@ export default function Programme() {
           <Heading variant="h2" accent="up">
             Coming up
           </Heading>
-          <LinkRow tone="vanilla" icon="leaf" title="Week 4 · Deload" text="2 sets, loads −30 %. Then your block review." onPress={() => router.push('/review/1')} />
-          <LinkRow tone="latte" icon="dumbbell" title="Block 2 · Building" text="Lower · Upper · Full body & cardio, 45 min" trailing="lock" />
-          <LinkRow tone="mauve" icon="crown" title="Block 3 · Glow" text="Heaviest loads, finishers, tests in week 12" trailing="lock" />
+          {deload ? (
+            <LinkRow
+              tone="vanilla"
+              icon="leaf"
+              title={`Week ${deload.week} · ${deload.phase === 'test' ? 'Tests' : 'Deload'}`}
+              text={deload.phase === 'test' ? 'Loads −20 %, then the five tests.' : `${deload.maxSets} sets, loads −${Math.round((1 - (deload.loadFactor ?? 1)) * 100)} %. Then your block review.`}
+              onPress={() => router.push(`/review/${block.number}`)}
+            />
+          ) : null}
+          {nextBlocks.map((b) => (
+            <LinkRow
+              key={b.number}
+              tone={b.number === 2 ? 'latte' : 'mauve'}
+              icon={b.number === 2 ? 'dumbbell' : 'crown'}
+              title={`Block ${b.number} · ${b.name}`}
+              text={`${b.sessions.map((x) => x.name).join(' · ')}, ${b.sessions[0].minutes} min`}
+              trailing="lock"
+            />
+          ))}
         </View>
       </Gutter>
     </Screen>

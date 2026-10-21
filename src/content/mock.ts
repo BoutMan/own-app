@@ -27,9 +27,6 @@ export const mockWeek: readonly WeekDay[] = [
 export const mockToday = {
   dateLine: 'Monday, Oct 20 · week 3 of 12',
   cyclePill: 'Follicular · good day for heavy',
-  eyebrow: 'Today · Session A',
-  sessionName: 'Anchor',
-  sessionMeta: '35 min · lower body & push · home',
   plusOne: {
     title: 'One more rep on the goblet squat',
     text: 'Last time: 3 × 11 at 18 lb. Today, 12.',
@@ -58,12 +55,6 @@ export const mockSeason = {
   sessionsKept: 7,
   sessionsTotal: 36,
 } as const;
-
-export const mockWeekSessions = [
-  { key: 'b', name: 'Hinge', text: '35 min · posterior chain & pull', day: 'Wed', tone: 'latte', photo: 'backFlexRed' },
-  { key: 'c', name: 'Full circuit', text: '30 min · 3 rounds of 40/20', day: 'Fri', tone: 'mauve', photo: 'reverseLunge' },
-  { key: 'walk', name: 'Zone 2 walk', text: '30–45 min · the sentence test', day: 'Sat', tone: 'fog', photo: 'trackStretch' },
-] as const;
 
 export const mockMarkers = [
   { label: 'Energy', icon: 'bolt', tone: 'vanilla', day0: 4, now: 6 },

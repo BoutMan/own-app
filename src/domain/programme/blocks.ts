@@ -200,6 +200,7 @@ const b3c: CircuitSession = {
 export const blocks: readonly [Block, Block, Block] = [
   {
     number: 1, name: 'Foundations', weeks: [1, 2, 3, 4], page: 26,
+    summary: '3 full-body sessions, learn the 8 moves',
     intention: 'Learning the eight basic movements, building the habit before building the load.',
     realGoal: "Establishing three weekly appointments and learning eight movements. If after four weeks you've done 10 sessions out of 12 with clean technique, this block is a complete success, whatever the load.",
     loadInstruction: 'Week 1: 2 sets only per exercise, RPE 6. Weeks 2 and 3: 3 sets, RPE 7. Week 4: deload, 2 sets with the load cut by 30 %.',
@@ -208,6 +209,7 @@ export const blocks: readonly [Block, Block, Block] = [
   },
   {
     number: 2, name: 'Building', weeks: [5, 6, 7, 8], page: 30,
+    summary: 'Upper / lower split, loads climb',
     intention: 'Splitting upper and lower body to work each area for longer. The loads climb markedly.',
     realGoal: 'Increasing the load on every exercise at least once per three-week stretch. This is where your shape starts to change, because this is where the work volume becomes enough.',
     loadInstruction: 'Weeks 5 to 7: RPE 7 to 8, go up as soon as the top of the range is reached on every set. Week 8: deload, 2 sets at −30 %, then the day 60 review.',
@@ -216,6 +218,7 @@ export const blocks: readonly [Block, Block, Block] = [
   },
   {
     number: 3, name: 'Glow', weeks: [9, 10, 11, 12], page: 34,
+    summary: 'Heavier, fewer reps, tests in week 12',
     intention: 'Fewer reps, more load, a finisher at the end of every session. Week 12 is a testing week.',
     realGoal: 'Fewer reps, more load, a finisher in every session. And above all: redoing the five tests in week 12, and measuring what has changed.',
     loadInstruction: 'RPE 8 on the main movements: you have 2 reps left in reserve, never zero. You never go to failure on a heavy exercise, not even in week 12.',

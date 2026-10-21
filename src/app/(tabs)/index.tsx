@@ -22,6 +22,8 @@ import {
 } from '@/components';
 import { activityDot, mockToday, mockUser, mockWeek } from '@/content/mock';
 import { photos } from '@/content/photos';
+import { sessionsForWeek } from '@/domain/programme';
+import { useCurrentWeek } from '@/features/season/currentWeek';
 import { colors } from '@/theme';
 
 const legend = [
@@ -34,6 +36,9 @@ const legend = [
 export default function Today() {
   const [day, setDay] = useState('mon');
   const t = mockToday;
+  const week = useCurrentWeek();
+  // Monday's session until the schedule is persisted (milestone 4).
+  const session = sessionsForWeek(week)[0]!;
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -52,18 +57,18 @@ export default function Today() {
       >
         <Pill label={t.cyclePill} dot size="sm" />
         <Txt variant="eyebrow" color="rgba(255,255,255,0.88)" style={{ letterSpacing: 1.44, marginTop: 4 }}>
-          {t.eyebrow}
+          {`Today · Session ${session.letter}`}
         </Txt>
         <Heading variant="heroXL" on="photo" style={{ letterSpacing: -3.84, lineHeight: 59 }}>
-          {t.sessionName}
+          {session.name}
         </Heading>
         <Txt variant="body" size={14} color="rgba(255,255,255,0.9)">
-          {t.sessionMeta}
+          {`${session.minutes} min · ${session.focus} · home`}
         </Txt>
         <View style={styles.heroActions}>
-          <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} onPress={() => router.push('/session/a')} />
+          <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} onPress={() => router.push(`/session/${session.id}`)} />
           {/* TODO(milestone 3): real 10-minute version from the "My week is complicated" rules. */}
-          <Button label="10-min version" variant="ghost" onPress={() => router.push('/session/a')} />
+          <Button label="10-min version" variant="ghost" onPress={() => router.push(`/session/${session.id}`)} />
         </View>
       </PhotoHeader>
 

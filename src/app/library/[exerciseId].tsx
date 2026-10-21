@@ -6,7 +6,8 @@ import { Button, CircleButton, Gutter, Heading, Icon, PhotoHeader, Pill, PlayGly
 import { exercisePhoto, familyLabels } from '@/content/exerciseMedia';
 import { exercises } from '@/content/exercises';
 import { photos } from '@/content/photos';
-import { sessionA } from '@/content/sessionA';
+import { blockForWeek, formatTarget, strengthLineFor } from '@/domain/programme';
+import { useCurrentWeek } from '@/features/season/currentWeek';
 import { colors, radius, tones } from '@/theme';
 
 /** Splits "Single-arm row" into its last word as the accent: one key word per title. */
@@ -20,7 +21,7 @@ export default function ExerciseDetail() {
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
   const ex = exercises.find((e) => e.id === exerciseId) ?? exercises[0]!;
   const fam = familyLabels[ex.family];
-  const inSession = sessionA.exercises.find((e) => e.id === ex.id);
+  const inSession = strengthLineFor(ex.id, blockForWeek(useCurrentWeek()));
   const title = ex.name.split(' · ')[0] ?? ex.name;
 
   return (
@@ -47,7 +48,7 @@ export default function ExerciseDetail() {
         </Heading>
         <View style={styles.heroRow}>
           <Txt variant="body" size={14} color="rgba(255,255,255,0.9)" style={{ flex: 1 }}>
-            {ex.muscles.join(' · ') + (inSession ? ` · ${inSession.sets} × ${inSession.reps}` : '')}
+            {ex.muscles.join(' · ') + (inSession ? ` · ${inSession.sets} × ${formatTarget(inSession.target)}` : '')}
           </Txt>
           {/* Video placeholder until the demos are shot. */}
           <View style={styles.demo}>
@@ -79,8 +80,8 @@ export default function ExerciseDetail() {
             </Heading>
             <View style={styles.versions}>
               {[
-                { icon: 'home' as const, title: 'Home', text: inSession.home },
-                { icon: 'dumbbell' as const, title: 'Gym', text: inSession.gym },
+                { icon: 'home' as const, title: 'Home', text: inSession.home ?? inSession.note ?? '' },
+                { icon: 'dumbbell' as const, title: 'Gym', text: inSession.gym ?? inSession.note ?? '' },
               ].map((v) => (
                 <View key={v.title} style={styles.version}>
                   <View style={styles.versionIcon}>

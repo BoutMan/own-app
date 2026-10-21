@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
@@ -19,20 +19,24 @@ import {
   Txt,
 } from '@/components';
 import { photos } from '@/content/photos';
-import { sessionA, sessionsById } from '@/content/sessionA';
+import { getSession, sessionsForWeek } from '@/domain/programme';
+import { useCurrentWeek } from '@/features/season/currentWeek';
+import { toPlayable } from '@/features/session/playable';
 import { RestRing } from '@/features/session/RestRing';
 import { formatClock, logSet, restLeft, skipRest, startRunner } from '@/features/session/runner';
 import { colors, tones, type Tone } from '@/theme';
 
 const muscleTones: Tone[] = ['mauve', 'latte', 'fog', 'vanilla'];
 
-/** 13 · Guided session. Works offline: everything runs on the device. */
+/** 13 · Guided session. Plays any of the nine sessions of the guide. Works offline. */
 export default function GuidedSession() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const session = sessionsById[id ?? ''] ?? sessionA;
+  const week = useCurrentWeek();
+  const session = useMemo(() => toPlayable(getSession(id ?? '') ?? sessionsForWeek(week)[0]!, week), [id, week]);
   const insets = useSafeAreaInsets();
-  const [state, setState] = useState(() => startRunner(Date.now()));
+  const [state, setState] = useState(() => startRunner(session, Date.now()));
   const [mode, setMode] = useState<'home' | 'gym'>('home');
+  const [gentle, setGentle] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
@@ -43,26 +47,27 @@ export default function GuidedSession() {
   useEffect(() => {
     if (state.finished) {
       const minutes = Math.max(1, Math.round((Date.now() - state.startedAt) / 60000));
-      router.replace({ pathname: '/session/done', params: { minutes: String(minutes), exercises: String(session.exercises.length) } });
+      router.replace({ pathname: '/session/done', params: { id: session.id, minutes: String(minutes) } });
     }
-  }, [state.finished, state.startedAt, session.exercises.length]);
+  }, [state.finished, state.startedAt, session.id]);
 
-  const ex = session.exercises[state.exerciseIndex] ?? session.exercises[0]!;
-  const next = session.exercises[state.exerciseIndex + 1];
+  const circuit = session.order === 'rounds';
+  const step = session.steps[state.stepIndex] ?? session.steps[0]!;
+  const next = circuit
+    ? session.steps[state.stepIndex + 1] ?? (state.setIndex + 1 < step.sets ? session.steps[0] : undefined)
+    : session.steps[state.stepIndex + 1];
   const resting = restLeft(state, now);
   const elapsed = Math.floor((now - state.startedAt) / 1000);
-  // The rest just started belongs to the previous exercise when we moved on to a new one.
-  const prevEx = state.setIndex === 0 ? session.exercises[state.exerciseIndex - 1] : ex;
-  const restTotal = prevEx?.restSeconds ?? ex.restSeconds;
-  const restCue = (state.setIndex === 0 ? prevEx?.restCue : ex.restCue) ?? `Next: set ${state.setIndex + 1} of ${ex.name.toLowerCase()}.`;
-  const variant = mode === 'home' ? ex.home : ex.gym;
+  const variant = gentle && step.gentler ? step.gentler : mode === 'home' ? step.home : step.gym;
+  const restCue = step.note ?? `Next: ${step.name.toLowerCase()}, set ${state.setIndex + 1}.`;
+  const hasVersions = Boolean(step.home || step.gym);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.white }}>
       <StatusBar style="light" />
       <Screen padTop={false} gap={18} contentStyle={{ paddingBottom: 110 }}>
         <PhotoHeader
-          source={photos[ex.photo]}
+          source={photos[step.photo]}
           height={480}
           focus={{ top: '30%', left: '50%' }}
           top={
@@ -79,52 +84,58 @@ export default function GuidedSession() {
           }
         >
           <View style={styles.pills}>
-            <Pill label={`${state.exerciseIndex + 1} of ${session.exercises.length}`} size="sm" />
-            <Pill label={`${ex.sets} × ${ex.reps}`} size="sm" />
+            <Pill label={circuit ? `Round ${state.setIndex + 1} of ${step.sets}` : `${state.stepIndex + 1} of ${session.steps.length}`} size="sm" />
+            <Pill label={circuit ? step.target : `${step.sets} × ${step.target}`} size="sm" />
           </View>
-          <Heading variant="hero" size={40} on="photo" accent={ex.accent} style={{ letterSpacing: -2.4, lineHeight: 37 }}>
-            {ex.name}
+          <Heading variant="hero" size={step.name.length > 28 ? 32 : 40} on="photo" accent={step.accent} style={{ letterSpacing: -2.2, lineHeight: step.name.length > 28 ? 31 : 37 }}>
+            {step.name}
           </Heading>
-          <View style={styles.progress} accessibilityLabel={`Exercise ${state.exerciseIndex + 1} of ${session.exercises.length}`}>
-            {session.exercises.map((e, i) => (
-              <View key={e.id} style={[styles.progressSeg, { backgroundColor: i <= state.exerciseIndex ? colors.white : 'rgba(255,255,255,0.4)' }]} />
+          <View style={styles.progress} accessibilityLabel={`Step ${state.stepIndex + 1} of ${session.steps.length}`}>
+            {session.steps.map((st, i) => (
+              <View key={st.key} style={[styles.progressSeg, { backgroundColor: i <= state.stepIndex ? colors.white : 'rgba(255,255,255,0.4)' }]} />
             ))}
           </View>
         </PhotoHeader>
 
         <Gutter gap={18}>
           <View style={styles.tags}>
-            {ex.muscles.map((m, i) => (
+            {step.muscles.map((m, i) => (
               <Tag key={m} label={m} tone={muscleTones[i % muscleTones.length]} />
             ))}
-            <Tag label={`RPE ${ex.rpe}`} />
+            {step.rpe ? <Tag label={step.rpe} /> : null}
           </View>
 
           <View style={{ gap: 8 }}>
-            <SegmentedControl
-              surface="white"
-              stretch
-              value={mode}
-              onChange={setMode}
-              options={[
-                { value: 'home', label: 'Home version' },
-                { value: 'gym', label: 'Gym version' },
-              ]}
-            />
-            <Txt variant="meta" color={colors.grey}>
-              {variant}
-            </Txt>
+            {hasVersions ? (
+              <SegmentedControl
+                surface="white"
+                stretch
+                value={mode}
+                onChange={setMode}
+                options={[
+                  { value: 'home', label: 'Home version' },
+                  { value: 'gym', label: 'Gym version' },
+                ]}
+              />
+            ) : null}
+            {variant || step.note ? (
+              <Txt variant="meta" color={colors.grey}>
+                {[variant, hasVersions && !gentle ? step.note : undefined].filter(Boolean).join(' · ')}
+              </Txt>
+            ) : null}
           </View>
 
           <View style={{ gap: 10 }}>
             <View style={styles.sectionHead}>
-              <Heading variant="h2" accent="sets">
-                Your sets
+              <Heading variant="h2" accent={circuit ? 'rounds' : 'sets'}>
+                {circuit ? 'Your rounds' : 'Your sets'}
               </Heading>
-              <Txt variant="meta" color={colors.grey}>{`rest ${ex.restSeconds} s`}</Txt>
+              <Txt variant="meta" color={colors.grey}>
+                {circuit ? `${step.restSeconds} s between moves` : step.restSeconds ? `rest ${step.restSeconds} s` : 'no rest'}
+              </Txt>
             </View>
-            {Array.from({ length: ex.sets }, (_, i) => {
-              const done = i < state.setIndex;
+            {Array.from({ length: step.sets }, (_, i) => {
+              const done = i < (circuit ? state.setIndex : state.done[state.stepIndex] ?? 0);
               const current = i === state.setIndex;
               return (
                 <View key={i} style={[styles.set, done && styles.setDone, current && styles.setNow]}>
@@ -135,7 +146,7 @@ export default function GuidedSession() {
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="bodyStrong" color={done ? tones.vanilla.strong : colors.ink}>
-                      {/^[\d–-]+$/.test(ex.reps) ? `${ex.reps} reps` : ex.reps}
+                      {step.target}
                     </Txt>
                     <Txt variant="small" color={done ? tones.vanilla.soft : colors.grey}>
                       {done ? 'Logged' : current ? (resting ? 'After the rest' : 'Your turn') : 'Coming up'}
@@ -154,26 +165,26 @@ export default function GuidedSession() {
           </View>
 
           {resting > 0 ? (
-            <Pressable accessibilityRole="button" accessibilityHint="Skips the rest" onPress={() => setState(skipRest)} style={styles.rest}>
-              <RestRing secondsLeft={resting} total={restTotal} />
+            <View style={styles.rest}>
+              <RestRing secondsLeft={resting} total={state.restTotal} />
               <View style={{ flex: 1, gap: 4 }}>
                 <Txt variant="eyebrow" color={tones.mocha.soft} style={{ letterSpacing: 0.96 }}>
-                  Rest · tap to skip
+                  Rest
                 </Txt>
                 <Txt variant="bodyStrong" color={tones.mocha.strong} style={{ lineHeight: 20 }}>
                   {restCue}
                 </Txt>
               </View>
-            </Pressable>
+            </View>
           ) : null}
 
-          {ex.tip ? (
+          {step.tip ? (
             <View style={styles.tip}>
               <Txt variant="eyebrow" color={tones.fog.soft} style={{ letterSpacing: 0.96 }}>
-                Coach tip
+                Watch out
               </Txt>
               <Txt variant="cardTitle" size={16} color={tones.fog.strong}>
-                {ex.tip}
+                {step.tip}
               </Txt>
             </View>
           ) : null}
@@ -181,22 +192,28 @@ export default function GuidedSession() {
           {next ? (
             <ThumbRow
               source={photos[next.photo]}
-              eyebrow={`Next · ${state.exerciseIndex + 2} of ${session.exercises.length}`}
+              eyebrow={circuit && state.stepIndex + 1 >= session.steps.length ? `Next round · ${state.setIndex + 2} of ${step.sets}` : 'Next'}
               title={next.name}
-              text={`${next.sets} × ${next.reps}`}
+              text={circuit ? next.target : `${next.sets} × ${next.target}`}
               right={<Icon name="chevronRight" size={14} strokeWidth={2} color={colors.grey} />}
             />
-          ) : null}
+          ) : (
+            <ThumbRow source={photos[step.photo]} eyebrow="To finish" title="Finisher" text={session.finisher} />
+          )}
         </Gutter>
       </Screen>
 
       <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
-        {/* TODO(milestone 2): gentler versions come with the programme seed. */}
-        <Button label="Gentler version" variant="outline" style={{ flex: 1 }} />
+        <Button
+          label={step.gentler ? (gentle ? 'Full version' : 'Gentler version') : 'Gentler version'}
+          variant="outline"
+          style={{ flex: 1, opacity: step.gentler ? 1 : 0.35 }}
+          onPress={step.gentler ? () => setGentle((g) => !g) : undefined}
+        />
         {resting > 0 ? (
           <Button label={`Skip rest · ${formatClock(resting)}`} style={{ flex: 1 }} onPress={() => setState(skipRest)} />
         ) : (
-          <Button label="Log set" style={{ flex: 1 }} onPress={() => setState((s) => logSet(session, s, Date.now()))} />
+          <Button label={circuit ? 'Done, next' : 'Log set'} style={{ flex: 1 }} onPress={() => setState((s) => logSet(session, s, Date.now()))} />
         )}
       </View>
     </View>

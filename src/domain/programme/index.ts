@@ -44,6 +44,22 @@ export function prescriptionForWeek(exercise: StrengthExercise, week: WeekNumber
   };
 }
 
+/** Library cards used by a block's sessions, in order of first appearance. */
+export function exerciseIdsInBlock(block: Block): string[] {
+  const ids = block.sessions.flatMap((s) => s.exercises.map((e) => e.exerciseId)).filter((x): x is string => x !== null);
+  return [...new Set(ids)];
+}
+
+/** First strength line of a block that uses a library card: its home and gym versions. */
+export function strengthLineFor(exerciseId: string, block: Block): StrengthExercise | undefined {
+  for (const s of block.sessions) {
+    if (s.kind !== 'strength') continue;
+    const line = s.exercises.find((e) => e.exerciseId === exerciseId && (e.home || e.gym));
+    if (line) return line;
+  }
+  return undefined;
+}
+
 /** Rounds of a circuit session for a given week. */
 export function circuitRoundsForWeek(session: Session, week: WeekNumber): number | null {
   if (session.kind !== 'circuit') return null;

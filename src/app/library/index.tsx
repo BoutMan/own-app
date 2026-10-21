@@ -8,7 +8,8 @@ import { CircleButton, Heading, Icon, Pill, PlayGlyph, Screen, Tag, Txt } from '
 import { exercisePhoto, familyLabels } from '@/content/exerciseMedia';
 import { exercises, type ExerciseFamily } from '@/content/exercises';
 import { photos } from '@/content/photos';
-import { sessionA } from '@/content/sessionA';
+import { blockForWeek, exerciseIdsInBlock } from '@/domain/programme';
+import { useCurrentWeek } from '@/features/season/currentWeek';
 import { colors, fontFamilyFor, photoHeader, radius, tones } from '@/theme';
 
 const FAMILIES = Object.keys(familyLabels) as ExerciseFamily[];
@@ -21,7 +22,8 @@ export default function Library() {
   const [family, setFamily] = useState<ExerciseFamily | 'all'>('all');
   const [showAll, setShowAll] = useState(false);
 
-  const blockIds = useMemo(() => new Set(sessionA.exercises.map((e) => e.id)), []);
+  const block = blockForWeek(useCurrentWeek());
+  const blockIds = useMemo(() => new Set(exerciseIdsInBlock(block)), [block]);
   const filtering = query.trim() !== '' || family !== 'all' || showAll;
   const list = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -111,7 +113,7 @@ export default function Library() {
             {filtering ? 'All moves' : 'Your block'}
           </Heading>
           <Txt variant="meta" color={colors.grey}>
-            {filtering ? `${list.length} found` : `Foundations · ${list.length} moves`}
+            {filtering ? `${list.length} found` : `${block.name} · ${list.length} moves`}
           </Txt>
         </View>
         <View style={styles.grid}>

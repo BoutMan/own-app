@@ -5,16 +5,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Heading, Icon, Screen, Txt } from '@/components';
 import { photos } from '@/content/photos';
+import { blocks as programmeBlocks } from '@/domain/programme';
 import { formatShort, seasonEnd } from '@/lib/dates';
 import { useOnboarding, type Equipment, type OnboardingAnswers } from '@/features/onboarding/OnboardingContext';
 import { NumberTile } from '@/features/onboarding/ui';
 import { colors, space, type Tone } from '@/theme';
 
-const blocks: { n: number; tone: Tone; title: string; text: string }[] = [
-  { n: 1, tone: 'vanilla', title: 'Foundations · weeks 1–4', text: '3 full-body sessions, learn the 8 moves' },
-  { n: 2, tone: 'latte', title: 'Building · weeks 5–8', text: 'Upper / lower split, loads climb' },
-  { n: 3, tone: 'mauve', title: 'Glow · weeks 9–12', text: 'Heavier, fewer reps, tests in week 12' },
-];
+const blockTones: Tone[] = ['vanilla', 'latte', 'mauve'];
+const blockList = programmeBlocks.map((b, i) => ({
+  n: b.number,
+  tone: blockTones[i]!,
+  title: `${b.name} · weeks ${b.weeks[0]}–${b.weeks[3]}`,
+  text: b.summary,
+}));
 
 const equipmentWords: Record<Exclude<Equipment, 'none'>, string> = {
   chair: 'a chair',
@@ -66,7 +69,7 @@ export default function Ready() {
         </View>
 
         <View style={{ gap: 8 }}>
-          {blocks.map((b) => (
+          {blockList.map((b) => (
             <View key={b.n} style={styles.block}>
               <NumberTile n={b.n} tone={b.tone} size={42} />
               <View style={{ flex: 1, gap: 2 }}>
