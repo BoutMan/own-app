@@ -50,8 +50,8 @@ scripts/build-preview  web preview builder
 - [x] First screens: 01 Splash, 02 Welcome, 12 Today (static mock data), tab bar
 - [ ] Milestone 1 — MVP static screens + full navigation
   - [x] First launch: onboarding 1–7 (03–09), 10 Your season is ready, 11 Paywall
-  - [ ] Tabs: 16 Programme, 15 Progress, 25 Me
-  - [ ] Session: 13 Guided session, 14 Session complete
+  - [x] Tabs: 16 Programme, 15 Progress, 25 Me
+  - [x] Session: 13 Guided session (runs session A from the guide p. 27), 14 Session complete
   - [ ] 17 Library, 18 Exercise detail, 21 Sunday check-in, 22 Block review, 23 My week is complicated
   - [ ] 26 Settings, 27 Subscription, 28 Data & privacy
 - [ ] Milestone 2 — data model + programme content from the PDF
