@@ -96,7 +96,8 @@ export default function Paywall() {
           </Txt>
           <View style={styles.links}>
             {['Restore', 'Privacy', 'Terms'].map((l) => (
-              <Pressable key={l} accessibilityRole="link" hitSlop={8}>
+              // TODO(milestone 4): "Restore" calls RevenueCat; Terms gets its own page.
+              <Pressable key={l} accessibilityRole="link" hitSlop={8} onPress={l === 'Restore' ? undefined : () => router.push('/settings/privacy')}>
                 <Txt variant="small" color={colors.grey} style={{ textDecorationLine: 'underline' }}>
                   {l}
                 </Txt>
