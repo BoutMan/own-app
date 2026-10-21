@@ -78,6 +78,12 @@ function beats(a: [number, number], b: [number, number]): boolean {
   return a[0] > b[0] || (a[0] === b[0] && a[1] > b[1]);
 }
 
+/** True when today's performance beats the previous one: heavier, or more reps/seconds at the same load. */
+export function improvedOn(today: PastPerformance, previous: PastPerformance | undefined): boolean {
+  if (!previous || previous.sets.length === 0) return false;
+  return beats(score(today), score(previous));
+}
+
 /** p. 38: three sessions in a row without progress on the exercise. */
 export function isStalled(history: PastPerformance[]): boolean {
   const base = history.filter((h) => !h.adjusted);

@@ -6,6 +6,8 @@
 import { exercisePhoto } from '@/content/exerciseMedia';
 import { exercises as library, type Exercise } from '@/content/exercises';
 import type { PhotoKey } from '@/content/photos';
+import { caseAdjustments, type Adjustment } from '@/domain/engine/adjustments';
+import type { Line } from '@/domain/engine/plusOne';
 import {
   circuitRoundsForWeek,
   formatRpe,
@@ -38,6 +40,10 @@ export type PlayableStep = {
   /** Common mistake from the library card (guide pp. 41–47). */
   tip?: string;
   exerciseIds: string[];
+  /** What the user logs per set: reps (+ load), seconds of a hold, or just "done" (supersets, circuits). */
+  input: 'reps' | 'hold' | 'done';
+  /** Prescription fed to the +1 rule (single strength lines only). */
+  line?: Line;
 };
 
 export type PlayableSession = {
@@ -100,6 +106,7 @@ function strengthSteps(session: Extract<Session, { kind: 'strength' }>, week: We
         photo: photoFor(e.exerciseId),
         tip: card(e.exerciseId)?.mistake,
         exerciseIds: ids,
+        input: 'done',
       });
       i++;
       continue;
@@ -119,6 +126,8 @@ function strengthSteps(session: Extract<Session, { kind: 'strength' }>, week: We
       photo: photoFor(e.exerciseId),
       tip: card(e.exerciseId)?.mistake,
       exerciseIds: e.exerciseId ? [e.exerciseId] : [],
+      input: e.target.kind === 'hold' ? 'hold' : 'reps',
+      line: { name: e.name, target: e.target, rpe: e.rpe, sets: e.sets },
     });
   }
   return steps;
@@ -142,6 +151,7 @@ function circuitSteps(session: Extract<Session, { kind: 'circuit' }>, week: Week
     photo: photoFor(e.exerciseId),
     tip: card(e.exerciseId)?.mistake,
     exerciseIds: e.exerciseId ? [e.exerciseId] : [],
+    input: 'done' as const,
   }));
 }
 
@@ -158,4 +168,63 @@ export function toPlayable(session: Session, week: WeekNumber): PlayableSession 
     coachNote: session.coachNote,
     finisher: session.finisher.text,
   };
+}
+
+/** The seven "My week is complicated" cases (guide p. 55) that change today's session. */
+export type Variant = 'full' | 'short' | 'away' | 'ill' | 'period' | 'packed' | 'noKit';
+
+export function isVariant(v: string | undefined): v is Variant {
+  return v !== undefined && ['full', 'short', 'away', 'ill', 'period', 'packed', 'noKit'].includes(v);
+}
+
+export type VariantResult = {
+  session: PlayableSession;
+  adjustments: Adjustment[];
+  /** Forces the home version of every line. */
+  homeOnly: boolean;
+  banner?: { title: string; message: string };
+};
+
+const isCore = (st: PlayableStep) => st.exerciseIds.some((id) => card(id)?.family === 'core');
+
+/** Applies a "My week is complicated" case to a session (guide p. 55). */
+export function applyVariant(session: PlayableSession, variant: Variant): VariantResult {
+  switch (variant) {
+    case 'short':
+      return {
+        session: { ...session, steps: session.steps.slice(0, 3), finisher: '' },
+        adjustments: [],
+        homeOnly: false,
+        banner: { title: 'Only 20 minutes', message: 'The first three exercises, in order, without the finisher. They are always the most important ones.' },
+      };
+    case 'away':
+      return {
+        session,
+        adjustments: [],
+        homeOnly: true,
+        banner: { title: 'Away for a few days', message: 'Session C with a band, plus a walk. Three days without strength work cost you nothing.' },
+      };
+    case 'ill':
+      return { session, adjustments: [caseAdjustments.illness], homeOnly: false, banner: caseAdjustments.illness };
+    case 'period': {
+      const steps = session.steps.filter((st) => !isCore(st));
+      return {
+        session: { ...session, steps: steps.length ? steps : session.steps, finisher: 'A 10-minute walk instead of the core work.' },
+        adjustments: [caseAdjustments.period],
+        homeOnly: false,
+        banner: caseAdjustments.period,
+      };
+    }
+    case 'packed':
+      return { session, adjustments: [], homeOnly: true, banner: { title: 'The gym is packed', message: 'Home version of each line, no queue. The first exercise stays first.' } };
+    case 'noKit':
+      return {
+        session: { ...session, steps: session.steps.map((st) => ({ ...st, note: ['Tempo 3-1-1: three seconds down, one pause, one up', st.note].filter(Boolean).join(' · ') })) },
+        adjustments: [],
+        homeOnly: true,
+        banner: { title: 'No equipment today', message: 'Bodyweight with a 3-1-1 tempo. A slow bodyweight squat beats a sloppy loaded one.' },
+      };
+    default:
+      return { session, adjustments: [], homeOnly: false };
+  }
 }

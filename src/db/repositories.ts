@@ -77,6 +77,10 @@ export function logSet(db: Db, workoutId: string, s: LoggedSet, at = nowIso()): 
   return db.insert(setLogs).values({ workoutId, ...s, loggedAt: at }).returning({ id: setLogs.id }).get().id;
 }
 
+export function setFeel(db: Db, workoutId: string, feel: number): void {
+  db.update(workouts).set({ feel }).where(eq(workouts.id, workoutId)).run();
+}
+
 export function setRpe(db: Db, setId: number, rpe: number): void {
   db.update(setLogs).set({ rpe }).where(eq(setLogs.id, setId)).run();
 }
