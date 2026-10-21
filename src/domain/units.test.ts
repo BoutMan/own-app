@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { displayLoad, formatGirth, formatLength, formatLoad, inputLoadToKg, kgToLb, lbToKg, roundLoad, scaleLoadKg } from './units';
+import { stepLoadKg, displayLoad, formatGirth, formatLength, formatLoad, inputLoadToKg, kgToLb, lbToKg, roundLoad, scaleLoadKg } from './units';
 
 describe('units', () => {
   it('converts kg and lb both ways', () => {
@@ -42,6 +42,19 @@ describe('units', () => {
     const kg = scaleLoadKg(inputLoadToKg(18, 'imperial'), 0.7, 'imperial');
     expect(displayLoad(kg, 'imperial')).toBe(13);
     expect(scaleLoadKg(10, 0.7, 'metric')).toBe(7);
+  });
+
+  it('steps loads through pickable weights, never below bodyweight', () => {
+    const up = (lbs: number) => displayLoad(stepLoadKg(inputLoadToKg(lbs, 'imperial'), 1, 'imperial'), 'imperial');
+    const down = (lbs: number) => displayLoad(stepLoadKg(inputLoadToKg(lbs, 'imperial'), -1, 'imperial'), 'imperial');
+    expect(up(0)).toBe(1);
+    expect(up(19)).toBe(20);
+    expect(up(20)).toBe(22.5);
+    expect(down(22.5)).toBe(20);
+    expect(down(20)).toBe(19);
+    expect(down(0)).toBe(0);
+    expect(displayLoad(stepLoadKg(10, 1, 'metric'), 'metric')).toBe(12.5);
+    expect(displayLoad(stepLoadKg(10, -1, 'metric'), 'metric')).toBe(9);
   });
 
   it('formats lengths', () => {

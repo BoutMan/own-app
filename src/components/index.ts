@@ -19,3 +19,4 @@ export { Placeholder } from './Placeholder';
 export { LinkRow, ThumbRow } from './Rows';
 export { SeasonBar } from './SeasonBar';
 export { Tag } from './Tag';
+export { Stepper } from './Stepper';

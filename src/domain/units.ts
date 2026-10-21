@@ -34,6 +34,16 @@ export function ceilLoad(value: number, system: UnitSystem): number {
   return value <= 20 ? Math.ceil(value - eps) : Math.ceil(value / 2.5 - eps) * 2.5;
 }
 
+/** Next (dir = 1) or previous (dir = −1) pickable load, in kg. Never below 0 (bodyweight). */
+export function stepLoadKg(kg: number, dir: 1 | -1, system: UnitSystem): number {
+  const now = displayLoad(kg, system);
+  let next: number;
+  if (system === 'metric') next = now + dir * (now + (dir > 0 ? 0 : -0.01) < 10 ? 1 : 2.5);
+  else next = now + dir * (now + (dir > 0 ? 0 : -0.01) < 20 ? 1 : 2.5);
+  next = roundLoad(Math.max(0, next), system);
+  return inputLoadToKg(next, system);
+}
+
 /** Load in the display unit, rounded for display ("18 lb" for 8 kg). */
 export function displayLoad(kg: number, system: UnitSystem): number {
   return roundLoad(system === 'metric' ? kg : kgToLb(kg), system);
