@@ -55,6 +55,10 @@ type ListRowProps = {
   icon: IconName;
   tone: Tone;
   label: string;
+  /** Second line under the label. */
+  detail?: string;
+  /** Icon tile background; `white` for neutral rows (reminders, account). */
+  tileOnWhite?: boolean;
   /** Right side: short grey value, or any control (Switch, SegmentedControl). */
   value?: string;
   right?: ReactNode;
@@ -64,14 +68,25 @@ type ListRowProps = {
   children?: ReactNode;
 };
 
-export function ListRow({ icon, tone, label, value, right, chevron, onPress, children }: ListRowProps) {
+export function ListRow({ icon, tone, label, detail, tileOnWhite, value, right, chevron, onPress, children }: ListRowProps) {
   return (
     <Pressable disabled={!onPress} onPress={onPress} accessibilityRole={onPress ? 'button' : undefined} style={styles.row}>
       <View style={styles.line}>
-        <IconTile icon={icon} tone={tone} />
-        <Txt variant="body" style={{ flex: 1 }}>
-          {label}
-        </Txt>
+        {tileOnWhite ? (
+          <View style={styles.whiteTile}>
+            <Icon name={icon} size={16} strokeWidth={1.8} />
+          </View>
+        ) : (
+          <IconTile icon={icon} tone={tone} />
+        )}
+        <View style={{ flex: 1, gap: 1 }}>
+          <Txt variant="body">{label}</Txt>
+          {detail ? (
+            <Txt variant="small" color={colors.grey}>
+              {detail}
+            </Txt>
+          ) : null}
+        </View>
         {value ? (
           <Txt variant="meta" color={colors.grey}>
             {value}
@@ -91,4 +106,12 @@ const styles = StyleSheet.create({
   row: { paddingVertical: 12, gap: 10 },
   line: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   extra: { paddingLeft: 46 },
+  whiteTile: {
+    width: size.iconTile,
+    height: size.iconTile,
+    borderRadius: radius.iconTile,
+    backgroundColor: colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

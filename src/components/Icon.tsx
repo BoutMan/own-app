@@ -85,6 +85,76 @@ const glyphs = {
       <Path d="M19.4 15a1.6 1.6 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.6 1.6 0 00-2.7 1.1V21a2 2 0 11-4 0v-.1a1.6 1.6 0 00-2.7-1.1l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.6 1.6 0 00-1.1-2.7H3a2 2 0 110-4h.1a1.6 1.6 0 001.1-2.7l-.1-.1a2 2 0 112.8-2.8l.1.1a1.6 1.6 0 002.7-1.1V3a2 2 0 114 0v.1a1.6 1.6 0 002.7 1.1l.1-.1a2 2 0 112.8 2.8l-.1.1a1.6 1.6 0 001.1 2.7H21a2 2 0 110 4h-.1a1.6 1.6 0 00-1.5 1.3z" />
     </>
   ),
+  heart: <Path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z" />,
+  flag: <Path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  target: (
+    <>
+      <Circle cx={12} cy={12} r={8} />
+      <Circle cx={12} cy={12} r={4} />
+      <Circle cx={12} cy={12} r={0.8} />
+    </>
+  ),
+  send: <Path d="M3 12l18-7-7 18-2-8z" />,
+  ill: <Path d="M12 3v6M9 6h6M5 13a7 7 0 0014 0" />,
+  bars: <Path d="M4 21v-7M8 21V10M12 21V3M16 21v-9M20 21v-5" />,
+  restart: <Path d="M4 12a8 8 0 108-8M4 4v4h4" />,
+  note: <Path d="M5 4h14v16H5zM9 9h6M9 13h6M9 17h3" />,
+  bell: <Path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4" />,
+  halfCircle: (
+    <>
+      <Circle cx={12} cy={12} r={8} />
+      <Path d="M12 4a8 8 0 010 16" />
+    </>
+  ),
+  people: (
+    <>
+      <Circle cx={9} cy={9} r={3.5} />
+      <Circle cx={16.5} cy={10} r={2.5} />
+      <Path d="M3 20c.8-3.5 3.2-5.5 6-5.5s5.2 2 6 5.5M15 15c2.5 0 4.5 1.6 5.5 5" />
+    </>
+  ),
+  walk: (
+    <>
+      <Circle cx={13} cy={4.5} r={1.8} />
+      <Path d="M10 21l2-6-3-3 1-4 4 2 3 1M12 15l3 6" />
+    </>
+  ),
+  plankMark: (
+    <>
+      <Circle cx={12} cy={12} r={9} />
+      <Path d="M7 12h10" />
+    </>
+  ),
+  phone: (
+    <>
+      <Rect x={7} y={3} width={10} height={18} rx={2} />
+      <Path d="M11 18h2" />
+    </>
+  ),
+  cloud: <Path d="M7 18a4 4 0 01-.5-8 5.5 5.5 0 0110.7-1.5A4 4 0 0117 18zM12 11v4M10 13l2-2 2 2" />,
+  ban: (
+    <>
+      <Circle cx={12} cy={12} r={8} />
+      <Path d="M6.5 6.5l11 11" />
+    </>
+  ),
+  card: (
+    <>
+      <Rect x={3} y={6} width={18} height={12} rx={2} />
+      <Path d="M3 10h18" />
+    </>
+  ),
+  download: <Path d="M12 4v11M7 10l5 5 5-5M5 20h14" />,
+  trash: <Path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" />,
+  music: (
+    <>
+      <Circle cx={7} cy={17} r={2.5} />
+      <Circle cx={17} cy={15} r={2.5} />
+      <Path d="M9.5 17V6l10-2v11" />
+    </>
+  ),
+  chat: <Path d="M5 5h14v10H9l-4 4z" />,
+  shirt: <Path d="M8 4l4 2 4-2 4 4-3 3v9H7v-9L4 8z" />,
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof glyphs;
