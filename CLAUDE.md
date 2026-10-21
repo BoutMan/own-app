@@ -35,9 +35,8 @@ Choix pragmatique pour un développeur React/TypeScript qui veut iOS d'abord san
 
 - **Expo** (dernière version stable du SDK) + **TypeScript strict** + **Expo Router** (navigation par fichiers ; routes proposées dans `design/screens.md`). Development build (pas Expo Go) dès qu'on touche à HealthKit ou aux achats.
 - UI : `StyleSheet` + `design/tokens.ts`, composants maison. Pas de kit UI tiers. `expo-image` pour les photos, `expo-linear-gradient` pour les en-têtes photo, `react-native-svg` pour les icônes et anneaux, `@expo-google-fonts/instrument-sans` pour la police.
-- Données : **local-first** (la séance ne doit jamais dépendre du réseau : salles en sous-sol). SQLite (`expo-sqlite`) + Drizzle ORM. Synchronisation compte plus tard.
-- Backend (quand nécessaire : compte, sauvegarde, cercles en V2) : Supabase (auth, Postgres). Données de cycle et de santé chiffrées.
-- Abonnements : **RevenueCat** (StoreKit 2 / Google Play Billing).
+- Données : **100 % locales** (décision de Louison, session 5) : SQLite (`expo-sqlite`) + Drizzle ORM, rien n'est synchronisé. Pas de compte, pas de backend pour les données de l'utilisatrice.
+- Abonnements : **RevenueCat** (StoreKit 2 / Google Play Billing). Il ne reçoit que l'identifiant anonyme d'achat, jamais de donnée de santé ou d'entraînement.
 - Rappels : `expo-notifications` en notifications **locales** planifiées.
 - Santé : HealthKit en lecture seule (pas, sommeil, cycle) — phase V1.
 
@@ -45,7 +44,7 @@ Questionne ces choix si tu vois mieux, mais justifie par rapport aux contraintes
 
 ## Règles non négociables
 
-1. **Données de santé** (cycle, symptômes, bilan santé, photos) : jamais envoyées à un SDK publicitaire ou d'analytics (TikTok, Meta, etc.). Les SDK d'attribution ne reçoivent que des événements neutres : installation, début d'essai, achat. Voir la section « Risques réglementaires » de l'étude de marché (FTC Health Breach Notification Rule, affaire Flo/Meta).
+1. **Rien ne quitte le téléphone** (décision de Louison, session 5). Toutes les données de l'utilisatrice (séances, charges, bilan santé, cycle, marqueurs, photos, mensurations) sont stockées uniquement sur l'appareil. **Aucun SDK d'analytics, de crash reporting tiers, d'attribution ou de publicité** (pas de TikTok/Meta SDK, pas de Firebase Analytics, pas de Sentry). Seules exceptions réseau : l'achat via StoreKit/RevenueCat. Objectif App Store : étiquette de confidentialité « Data Not Collected ». Contexte : section « Risques réglementaires » de l'étude de marché (FTC Health Breach Notification Rule, affaire Flo/Meta) et App Store Review Guidelines 5.1.1 et 5.1.3 (données santé/HealthKit : pas de pub, pas de stockage iCloud, politique de confidentialité obligatoire).
 2. **Photos de progression** : stockées uniquement sur le téléphone, coffre verrouillé (Face ID), jamais uploadées. L'écran 28 (Data & privacy) le promet : l'implémentation doit tenir chaque promesse de cet écran.
 3. **Pas d'allégation médicale** : on parle de suivi et d'éducation, jamais de diagnostic ni de traitement. Les règles du bilan santé recommandent de consulter, elles ne diagnostiquent pas.
 4. **Hors ligne** : séance guidée, saisie et minuteurs fonctionnent sans réseau.
@@ -98,7 +97,7 @@ Ordre proposé pour le code (chaque jalon doit être testable sur simulateur ava
 - Petits commits lisibles, un par sous-étape.
 - Vérifier visuellement : lancer le simulateur iOS, faire une capture, la comparer au PNG de référence, corriger les écarts de tailles et d'espacements.
 - TypeScript strict, pas de `any`. Tests unitaires (Jest) pour le moteur de progression et les conversions d'unités.
-- Ne jamais committer de clés (RevenueCat, Supabase) : `.env` + `app.config.ts`.
+- Ne jamais committer de clés (RevenueCat) : `.env` + `app.config.ts`.
 
 ## Points connus à traiter
 
@@ -122,4 +121,5 @@ Ordre proposé pour le code (chaque jalon doit être testable sur simulateur ava
 - Les écrans pas encore construits existent en `Placeholder` (avec bouton retour) pour qu'aucun lien ne mène à une 404.
 - Bibliothèque (session 4) : `src/content/exercises.ts` contient les 35 fiches du PDF (pp. 41–47 : départ, mouvement, erreur fréquente), extraites automatiquement puis vérifiées. Les familles du PDF sont 5 (lower, upper, core, circuit, prevention), la maquette en annonçait 4 : le PDF fait foi. Photos provisoires dans `content/exerciseMedia.ts`.
 - Aperçu : sur ordinateur, cadre iPhone 15 (390 × 844) avec encoche et zones sûres simulées (`src/lib/PreviewInsets.tsx`, sans effet sur iOS/Android).
-- À trancher avec Louison : l'écran 05 dit que le bilan santé « ne quitte jamais le téléphone », l'écran 28 range « Health answers » dans le compte chiffré.
+- Tranché (session 5) : tout reste sur le téléphone, y compris le bilan santé ; pas de statistiques d'usage. L'écran 28 a été réécrit en conséquence (plus de compte, plus d'interrupteur « Anonymous usage stats » ni « Personalised offers », « Delete my account » devient « Erase all my data »), et Settings n'affiche plus d'e-mail ni de « Log out ».
+- Conséquences à garder en tête : sans serveur, un téléphone perdu = données perdues (seule la sauvegarde iOS de l'utilisatrice les protège) ; les cercles privés (V2, écran 29) et la mesure des campagnes TikTok (pas de SDK d'attribution, seulement les chiffres agrégés d'App Store Connect) devront être repensés.
