@@ -42,3 +42,7 @@ yarn-error.*
 
 # env
 .env
+
+# web preview build
+preview/
+preview-files.json
