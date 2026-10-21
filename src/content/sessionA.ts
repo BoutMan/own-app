@@ -60,7 +60,7 @@ export const sessionA: SessionTemplate = {
       muscles: ['Glutes', 'Hamstrings'], photo: 'hipThrust',
     },
     {
-      id: 'incline-push-up', name: 'Incline push-ups', accent: 'push-ups', sets: 3, reps: '8–10', rpe: '7', restSeconds: 90,
+      id: 'push-ups', name: 'Incline push-ups', accent: 'push-ups', sets: 3, reps: '8–10', rpe: '7', restSeconds: 90,
       home: 'Hands on the kitchen counter: the higher, the easier',
       gym: 'Dumbbell bench press, or chest press machine',
       muscles: ['Chest', 'Triceps', 'Shoulders'], photo: 'gymMirror',
