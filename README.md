@@ -11,6 +11,8 @@ Project brief for Claude Code and humans: [`CLAUDE.md`](CLAUDE.md). Product spec
 npm install
 npx expo start          # then press i (iOS simulator), a (Android) or w (web)
 npm run typecheck
+npm test                # Jest: units, programme content, session runner, database
+npm run db:generate     # after a change in src/db/schema.ts
 ```
 
 On a phone: install **Expo Go**, scan the QR code printed by `npx expo start` (same Wi-Fi).
@@ -37,7 +39,11 @@ src/
     dev/kitchen-sink   every design-system component (dev only, Me → "Open kitchen sink")
   components/          design system (PhotoHeader, Pill, CTA, ToneCard, Gauge, …)
   theme/               tokens (copied from design/tokens.ts) + typography helpers
+  domain/programme/    the guide's programme as typed data (blocks, sessions, week rules, +1…), with pages
+  domain/units.ts      kg ↔ lb, display rounding
+  db/                  on-device SQLite (Drizzle schema, repositories); migrations in drizzle/
   features/onboarding/ answers context, schedule rules, onboarding-only UI (StepScreen, SignaturePad…)
+  features/session/    guided session: playable steps and runner
   lib/                 pure helpers (dates)
   content/             photos registry, mock data for static screens
 assets/photos/         mood photos — NOT cleared for publication (design/photos/README.md)
@@ -57,7 +63,7 @@ scripts/build-preview  web preview builder
   - [x] 17 Library (the 35 cards of the guide), 18 Exercise detail, 21 Sunday check-in, 22 Block review, 23 My week is complicated
   - [x] 26 Settings, 27 Subscription, 28 Data & privacy
   - V1/V2 screens (19 Evening wind-down, 20 Cycle, 24 Glow card, 29 Circle) are placeholders
-- [ ] Milestone 2 — data model + programme content from the PDF
+- [x] Milestone 2 — data model + programme content from the PDF (see docs/programme-notes.md)
 - [ ] Milestone 3 — session engine (+1 rule, deloads) with unit tests
 - [ ] Milestone 4 — persisted onboarding + paywall (RevenueCat)
 - [ ] Milestone 5 — local reminders, Sunday check-in, block reviews, photo vault
