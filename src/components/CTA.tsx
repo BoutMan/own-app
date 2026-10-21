@@ -51,19 +51,31 @@ type ButtonProps = {
   onPress?: () => void;
   /** `solid`: black. `outline`: white with 1.5px ink border. `ghost`: outlined white on a photo. */
   variant?: 'solid' | 'outline' | 'ghost';
+  /** `lg`: 56px full-width primary ("Continue"). */
+  size?: 'md' | 'lg';
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 /** Secondary centred pill button ("Share" / "Done", "10-min version"). */
-export function Button({ label, onPress, variant = 'solid', style }: ButtonProps) {
+export function Button({ label, onPress, variant = 'solid', size = 'md', disabled, style }: ButtonProps) {
   const v = buttonVariants[variant];
+  const lg = size === 'lg';
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.button, v.box, pressed && { opacity: 0.85 }, style]}
+      style={({ pressed }) => [
+        styles.button,
+        v.box,
+        lg && { height: 56 },
+        (pressed || disabled) && { opacity: disabled ? 0.35 : 0.85 },
+        style,
+      ]}
     >
-      <Txt variant="body" size={variant === 'ghost' ? 13 : 15} weight={500} color={v.text}>
+      <Txt variant="body" size={variant === 'ghost' ? 13 : lg ? 16 : 15} weight={500} color={v.text}>
         {label}
       </Txt>
     </Pressable>

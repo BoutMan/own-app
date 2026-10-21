@@ -16,8 +16,7 @@ const pillars = [
 /** 02 · Welcome. Three pillars, photo mosaic, "Start my season". */
 export default function Welcome() {
   const insets = useSafeAreaInsets();
-  // TODO(milestone 1): "Start my season" opens onboarding 1/7 (Feel) once it exists.
-  const start = () => router.replace('/(tabs)');
+  const start = () => router.push('/feel');
   return (
     <View style={[styles.root, { paddingTop: insets.top + 12, paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
       <StatusBar style="dark" />
