@@ -6,7 +6,7 @@
  * `location.pathname`. A preview host serves the files under an unknown sub-path, so this script:
  *  1. rewrites absolute asset/chunk URLs to relative ones,
  *  2. pins a <base> to the page's own folder and resets the path to "/" before the bundle boots,
- *  3. renames `_expo/` and `_`-prefixed chunks (the preview host reserves names starting with "_"),
+ *  3. renames `_expo/`, `_`-prefixed and `[param]` chunks (names the preview host rejects),
  *  4. centres the app in a phone-width column on desktop.
  *
  * Usage: node scripts/build-preview.mjs
@@ -27,11 +27,13 @@ execSync(`npx expo export --platform web --output-dir ${out}`, {
 
 const BUNDLE_DIR = 'bundle';
 const jsDir = join(out, '_expo', 'static', 'js', 'web');
-// Chunk names like "__common-<hash>.js" or "_layout-<hash>.js" get a "c" prefix.
-const renamedChunks = readdirSync(jsDir).filter((n) => n.startsWith('_'));
+// The host reserves names starting with "_" and dislikes brackets: "__common-<hash>.js" becomes
+// "c__common-<hash>.js" and "[id]-<hash>.js" becomes "p-id-<hash>.js".
+const safeName = (n) => (n.startsWith('_') ? `c${n}` : n.replace(/^\[(\.\.\.)?([^\]]+)\]/, 'p-$2'));
+const renamedChunks = readdirSync(jsDir).filter((n) => safeName(n) !== n);
 const relativize = (s) => {
   let r = s.replaceAll('"/_expo/', `"${BUNDLE_DIR}/`).replaceAll('"/assets/', '"assets/');
-  for (const n of renamedChunks) r = r.replaceAll(`/${n}`, `/c${n}`);
+  for (const n of renamedChunks) r = r.replaceAll(`/${n}`, `/${safeName(n)}`);
   return r;
 };
 
@@ -56,7 +58,7 @@ function walk(dir) {
 }
 walk(join(out, '_expo'));
 if (!chunkUrlPatched) throw new Error('Chunk URL resolver not found: the Expo runtime changed, update CHUNK_URL.');
-for (const n of renamedChunks) renameSync(join(jsDir, n), join(jsDir, `c${n}`));
+for (const n of renamedChunks) renameSync(join(jsDir, n), join(jsDir, safeName(n)));
 renameSync(join(out, '_expo'), join(out, BUNDLE_DIR));
 
 const html = readFileSync(join(out, 'index.html'), 'utf8');
