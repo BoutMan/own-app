@@ -116,3 +116,5 @@ Ordre proposé pour le code (chaque jalon doit être testable sur simulateur ava
 - `expo-image` : `contentPosition` n'accepte pas `"center 35%"` ; écrire `{ top: '35%', left: '50%' }`.
 - La barre d'onglets est un composant maison (`TabBar`) branché sur `Tabs` d'`expo-router`.
 - Vérification visuelle possible sans simulateur : `npx expo export --platform web` puis capture Playwright à 390 px de large.
+- Aperçu pour Louison : `npm run preview` construit `preview/` (export web adapté pour tourner sous un sous-chemin), puis publication en artifact privé avec `preview/index.html` + la liste `preview-files.json` (root `preview/`). URL actuelle : https://claude.ai/artifact/VErzAtq3JyZZtR6uKeC6g6 (republier au même fichier pour garder le lien).
+- Onboarding (session 2) : réponses en mémoire dans `OnboardingContext` (pas encore persistées, jalon 4). Le récap « Your season is ready » est calculé depuis les réponses. Le design n'a pas d'étape « Mon pourquoi » (présente dans la spec) : question ouverte.
