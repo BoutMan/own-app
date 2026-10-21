@@ -90,6 +90,8 @@ export const workouts = sqliteTable(
     endedAt: text('ended_at'),
     /** "How did it feel?" 1–10. */
     feel: integer('feel'),
+    /** Load factor applied that day (0.7 on a deload…). Below 1, the sets are not a base for progress. */
+    loadFactor: real('load_factor').notNull().default(1),
   },
   (t) => [
     index('workouts_season_week').on(t.season, t.week),

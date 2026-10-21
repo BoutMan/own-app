@@ -2,8 +2,9 @@
  * Read/write helpers over the on-device database. Pure functions of a `Db`, so the same code runs
  * on the device (expo-sqlite) and in tests (better-sqlite3).
  */
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 
+import type { PastPerformance } from '@/domain/engine/plusOne';
 import type { Checkpoint, MarkerId, TestId } from '@/domain/programme';
 
 import {
@@ -52,6 +53,7 @@ export type StartWorkout = {
   week: number;
   mode: 'home' | 'gym';
   variant?: string;
+  loadFactor?: number;
 };
 
 export function startWorkout(db: Db, w: StartWorkout, at = nowIso()): string {
@@ -70,8 +72,58 @@ export type LoggedSet = {
   rpe?: number;
 };
 
-export function logSet(db: Db, workoutId: string, s: LoggedSet, at = nowIso()): void {
-  db.insert(setLogs).values({ workoutId, ...s, loggedAt: at }).run();
+/** Returns the id of the logged set (to add the RPE right after). */
+export function logSet(db: Db, workoutId: string, s: LoggedSet, at = nowIso()): number {
+  return db.insert(setLogs).values({ workoutId, ...s, loggedAt: at }).returning({ id: setLogs.id }).get().id;
+}
+
+export function setRpe(db: Db, setId: number, rpe: number): void {
+  db.update(setLogs).set({ rpe }).where(eq(setLogs.id, setId)).run();
+}
+
+export function getWorkout(db: Db, id: string) {
+  const workout = db.select().from(workouts).where(eq(workouts.id, id)).get();
+  if (!workout) return undefined;
+  const sets = db.select().from(setLogs).where(eq(setLogs.workoutId, id)).orderBy(setLogs.loggedAt).all();
+  return { ...workout, sets };
+}
+
+/** Finished workouts of a season, oldest first. */
+export function finishedWorkouts(db: Db, season: number) {
+  return db
+    .select()
+    .from(workouts)
+    .where(and(eq(workouts.season, season), isNotNull(workouts.endedAt)))
+    .orderBy(workouts.startedAt)
+    .all();
+}
+
+/**
+ * Past performances of an exercise, most recent first, one entry per workout: the input of the +1
+ * rule. Workouts done with reduced loads are flagged `adjusted`. `before` excludes a workout in progress.
+ */
+export function exerciseHistory(db: Db, exerciseId: string, limit = 4, excludeWorkoutId?: string): PastPerformance[] {
+  const recent = db
+    .selectDistinct({ id: workouts.id, startedAt: workouts.startedAt, loadFactor: workouts.loadFactor })
+    .from(setLogs)
+    .innerJoin(workouts, eq(setLogs.workoutId, workouts.id))
+    .where(and(eq(setLogs.exerciseId, exerciseId), isNotNull(setLogs.reps)))
+    .orderBy(desc(workouts.startedAt))
+    .limit(limit + 1)
+    .all()
+    .filter((w) => w.id !== excludeWorkoutId)
+    .slice(0, limit);
+  if (recent.length === 0) return [];
+  const rows = db
+    .select()
+    .from(setLogs)
+    .where(and(eq(setLogs.exerciseId, exerciseId), inArray(setLogs.workoutId, recent.map((w) => w.id))))
+    .orderBy(setLogs.setIndex)
+    .all();
+  return recent.map((w) => ({
+    adjusted: w.loadFactor < 1,
+    sets: rows.filter((r) => r.workoutId === w.id).map((r) => ({ reps: r.reps, loadKg: r.loadKg, seconds: r.seconds, rpe: r.rpe })),
+  }));
 }
 
 export function finishWorkout(db: Db, workoutId: string, feel: number | null, at = nowIso()): void {

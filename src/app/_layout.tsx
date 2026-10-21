@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { DbProvider } from '@/db/DbProvider';
 import { PreviewInsets } from '@/lib/PreviewInsets';
 import { colors } from '@/theme';
 
@@ -33,12 +34,14 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PreviewInsets>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
-          <Stack.Screen name="index" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-        </Stack>
+        <DbProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
+            <Stack.Screen name="index" options={{ animation: 'fade' }} />
+            <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
+            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+          </Stack>
+        </DbProvider>
       </PreviewInsets>
     </SafeAreaProvider>
   );

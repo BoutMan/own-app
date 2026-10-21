@@ -1,12 +1,11 @@
 import { describe, expect, it } from '@jest/globals';
 import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator';
-import path from 'node:path';
 
 import {
   activeSeason,
   eraseAll,
+  exerciseHistory,
   exportAll,
   finishWorkout,
   lastSetsForExercise,
@@ -18,16 +17,23 @@ import {
   startWorkout,
   workoutsInWeek,
 } from './repositories';
+import { runMigrations } from './migrate';
 import * as schema from './schema';
 import type { Db } from './types';
 
-/** A fresh in-memory database with the real migrations applied. */
+function migrateSqlite(sqlite: Database.Database): string[] {
+  return runMigrations({
+    exec: (sql) => sqlite.exec(sql),
+    appliedTags: () => (sqlite.prepare('SELECT tag FROM __own_migrations').all() as { tag: string }[]).map((r) => r.tag),
+  });
+}
+
+/** A fresh in-memory database with the bundled migrations applied, as the app does. */
 function testDb(): Db {
   const sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
-  const db = drizzle(sqlite, { schema });
-  migrate(db, { migrationsFolder: path.join(__dirname, '../../drizzle') });
-  return db;
+  migrateSqlite(sqlite);
+  return drizzle(sqlite, { schema });
 }
 
 describe('on-device database', () => {
@@ -58,6 +64,21 @@ describe('on-device database', () => {
     expect(lastSetsForExercise(db, 'plank')).toEqual([]);
     expect(workoutsInWeek(db, season, 2)).toHaveLength(1);
     expect(workoutsInWeek(db, season, 2)[0]).toMatchObject({ feel: 7, endedAt: '2026-11-02T19:05:00Z' });
+  });
+
+  it('builds the exercise history for the +1 rule, flagging reduced-load workouts', () => {
+    const db = testDb();
+    const season = startSeason(db, '2026-10-26');
+    const a = startWorkout(db, { sessionId: 'b1-a', season, week: 2, mode: 'home' }, '2026-11-02T18:30:00Z');
+    logSet(db, a, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 11, loadKg: 8 }, '2026-11-02T18:36:00Z');
+    logSet(db, a, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 1, reps: 12, loadKg: 8 }, '2026-11-02T18:38:00Z');
+    const b = startWorkout(db, { sessionId: 'b1-a', season, week: 4, mode: 'home', loadFactor: 0.7 }, '2026-11-16T18:30:00Z');
+    logSet(db, b, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 10, loadKg: 5.5 }, '2026-11-16T18:36:00Z');
+    const h = exerciseHistory(db, 'goblet-squat');
+    expect(h).toHaveLength(2);
+    expect(h[0]).toMatchObject({ adjusted: true, sets: [{ reps: 10, loadKg: 5.5 }] });
+    expect(h[1]!.sets.map((s) => s.reps)).toEqual([11, 12]);
+    expect(exerciseHistory(db, 'goblet-squat', 4, b)).toHaveLength(1);
   });
 
   it('rejects impossible values', () => {
