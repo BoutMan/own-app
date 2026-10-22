@@ -36,6 +36,14 @@ describe('guided session runner', () => {
     expect(pair.name).toBe('Banded leg curl + Standing calf raise on a step');
     expect(pair.restSeconds).toBe(45);
     expect(pair.target).toBe('12 + 15');
+    expect(pair.parts.map((p) => p.exerciseId)).toEqual(['banded-leg-curl', 'standing-calf-raise']);
+    expect(pair.parts.every((p) => p.history === 'strength' && p.loadable)).toBe(true);
+  });
+
+  it('logs reps per circuit station, apart from strength history', () => {
+    const station = toPlayable(getSession('b1-c')!, 2).steps[0]!;
+    expect(station.parts).toHaveLength(1);
+    expect(station.parts[0]).toMatchObject({ exerciseId: 'goblet-squat', history: 'circuit', loadable: false });
   });
 
   it('plays circuits station by station, round after round', () => {

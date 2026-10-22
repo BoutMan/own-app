@@ -27,18 +27,22 @@ export function summarizeWorkout(db: Db, workoutId: string, units: UnitSystem): 
   let plusOnes = 0;
   let next: WorkoutSummary['next'] | undefined;
   for (const step of playable?.steps ?? []) {
-    const id = step.exerciseIds[0];
-    if (!id || !step.line) continue;
-    const today: PastPerformance = {
-      adjusted: w.loadFactor < 1,
-      sets: w.sets.filter((s) => s.stepKey === step.key && s.reps != null).map((s) => ({ reps: s.reps, loadKg: s.loadKg, seconds: s.seconds, rpe: s.rpe })),
-    };
-    if (today.sets.length === 0) continue;
-    const previous = exerciseHistory(db, id, 4, workoutId);
-    if (!today.adjusted && improvedOn(today, previous.find((p) => !p.adjusted))) plusOnes++;
-    const s = suggestNext(step.line, [today, ...previous], units);
-    if (!next && s.kind === 'addLoad' && s.loadKg != null) {
-      next = { title: `Top of the range on the ${step.name.toLowerCase()}`, text: `Next time we move you to ${formatLoad(s.loadKg, units)}. You earned it.` };
+    for (const part of step.parts) {
+      const id = part.exerciseId;
+      if (!id) continue;
+      const today: PastPerformance = {
+        adjusted: w.loadFactor < 1,
+        sets: w.sets
+          .filter((s) => s.stepKey === step.key && s.exerciseId === id && (s.reps != null || s.seconds != null))
+          .map((s) => ({ reps: s.reps, loadKg: s.loadKg, seconds: s.seconds, rpe: s.rpe })),
+      };
+      if (today.sets.length === 0) continue;
+      const previous = exerciseHistory(db, id, 4, workoutId, part.history);
+      if (!today.adjusted && improvedOn(today, previous.find((p) => !p.adjusted))) plusOnes++;
+      const s = suggestNext(part.line, [today, ...previous], units);
+      if (!next && s.kind === 'addLoad' && s.loadKg != null) {
+        next = { title: `Top of the range on the ${part.name.toLowerCase()}`, text: `Next time we move you to ${formatLoad(s.loadKg, units)}. You earned it.` };
+      }
     }
   }
 

@@ -40,10 +40,27 @@ export type PlayableStep = {
   /** Common mistake from the library card (guide pp. 41–47). */
   tip?: string;
   exerciseIds: string[];
-  /** What the user logs per set: reps (+ load), seconds of a hold, or just "done" (supersets, circuits). */
+  /** What the user logs per set: reps (+ load), seconds of a hold, or just "done". */
   input: 'reps' | 'hold' | 'done';
   /** Prescription fed to the +1 rule (single strength lines only). */
   line?: Line;
+  /**
+   * Everything logged on this step, one entry per exercise: one for a single line, two for a
+   * superset (both moves, each with its own reps and load), one per circuit station (reps done in
+   * the work window). Empty when there is nothing to count.
+   */
+  parts: LogPart[];
+};
+
+export type LogPart = {
+  exerciseId: string | null;
+  name: string;
+  input: 'reps' | 'hold';
+  line: Line;
+  /** Circuits: reps in a time window, compared only with other circuit rounds. */
+  history: 'strength' | 'circuit';
+  /** Loads make no sense on most circuit stations. */
+  loadable: boolean;
 };
 
 export type PlayableSession = {
@@ -107,6 +124,14 @@ function strengthSteps(session: Extract<Session, { kind: 'strength' }>, week: We
         tip: card(e.exerciseId)?.mistake,
         exerciseIds: ids,
         input: 'done',
+        parts: [e, partner].map((x) => ({
+          exerciseId: x.exerciseId,
+          name: x.name,
+          input: x.target.kind === 'hold' ? ('hold' as const) : ('reps' as const),
+          line: { name: x.name, target: x.target, rpe: x.rpe, sets: x.sets },
+          history: 'strength' as const,
+          loadable: x.target.kind !== 'hold',
+        })),
       });
       i++;
       continue;
@@ -128,6 +153,16 @@ function strengthSteps(session: Extract<Session, { kind: 'strength' }>, week: We
       exerciseIds: e.exerciseId ? [e.exerciseId] : [],
       input: e.target.kind === 'hold' ? 'hold' : 'reps',
       line: { name: e.name, target: e.target, rpe: e.rpe, sets: e.sets },
+      parts: [
+        {
+          exerciseId: e.exerciseId,
+          name: e.name,
+          input: e.target.kind === 'hold' ? 'hold' : 'reps',
+          line: { name: e.name, target: e.target, rpe: e.rpe, sets: e.sets },
+          history: 'strength',
+          loadable: e.target.kind !== 'hold',
+        },
+      ],
     });
   }
   return steps;
@@ -152,6 +187,17 @@ function circuitSteps(session: Extract<Session, { kind: 'circuit' }>, week: Week
     tip: card(e.exerciseId)?.mistake,
     exerciseIds: e.exerciseId ? [e.exerciseId] : [],
     input: 'done' as const,
+    parts: [
+      {
+        exerciseId: e.exerciseId,
+        name: e.name,
+        input: 'reps' as const,
+        // Reps in the work window: no ceiling, the +1 is "one more rep than last round".
+        line: { name: e.name, target: { kind: 'maxMinus', minus: 0 } as const, rpe: e.rpe ?? { min: 7, max: 8 }, sets: rounds },
+        history: 'circuit' as const,
+        loadable: false,
+      },
+    ],
   }));
 }
 

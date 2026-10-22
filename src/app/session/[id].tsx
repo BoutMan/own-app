@@ -28,7 +28,7 @@ import { suggestNext, type Suggestion } from '@/domain/engine/plusOne';
 import { getSession, progressionRules, sessionsForWeek } from '@/domain/programme';
 import { formatLoad, stepLoadKg } from '@/domain/units';
 import { useSeason, useUnits } from '@/features/season/currentWeek';
-import { applyVariant, isVariant, toPlayable, type PlayableStep } from '@/features/session/playable';
+import { applyVariant, isVariant, toPlayable, type LogPart, type PlayableStep } from '@/features/session/playable';
 import { RestRing } from '@/features/session/RestRing';
 import { formatClock, logSet, restLeft, skipRest, startRunner } from '@/features/session/runner';
 import { useWorkoutRecorder } from '@/features/session/useWorkoutRecorder';
@@ -60,18 +60,21 @@ export default function GuidedSession() {
   const [gentle, setGentle] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [inputs, setInputs] = useState<Record<string, Inputs>>({});
-  const [toRate, setToRate] = useState<{ setId: number; label: string } | null>(null);
+  const [toRate, setToRate] = useState<{ setIds: number[]; label: string } | null>(null);
   const loadFactor = combinedFactor(adjustments);
   const recorder = useWorkoutRecorder({ sessionId: session.id, week, mode: homeOnly ? 'home' : mode, variant, loadFactor });
 
-  // +1 suggestion per step, from the last time each exercise was done (current workout excluded).
+  // +1 suggestion per exercise (both moves of a superset, each circuit station), from the last
+  // time it was done in the same kind of session (current workout excluded).
   const suggestions = useQuery(
     (db) => {
       const out: Record<string, Suggestion> = {};
       for (const st of session.steps) {
-        const id = st.exerciseIds[0];
-        if (!st.line || !id) continue;
-        out[st.key] = suggestNext(st.line, exerciseHistory(db, id, 4, recorder.workoutId.current ?? undefined), units);
+        for (const part of st.parts) {
+          if (!part.exerciseId) continue;
+          const history = exerciseHistory(db, part.exerciseId, 4, recorder.workoutId.current ?? undefined, part.history);
+          out[partKey(st, part)] = suggestNext(part.line, history, units);
+        }
       }
       return out;
     },
@@ -95,10 +98,17 @@ export default function GuidedSession() {
 
   const circuit = session.order === 'rounds';
   const step = session.steps[state.stepIndex] ?? session.steps[0]!;
-  const suggestion = suggestions[step.key];
-  const plannedLoad = suggestion?.loadKg != null ? adjustLoadKg(suggestion.loadKg, adjustments, units) : 0;
-  const input: Inputs = inputs[step.key] ?? { amount: suggestion?.target ?? defaultAmount(step), loadKg: plannedLoad };
-  const setInput = (patch: Partial<Inputs>) => setInputs((all) => ({ ...all, [step.key]: { ...input, ...patch } }));
+  const partInput = (part: LogPart): Inputs => {
+    const key = partKey(step, part);
+    if (inputs[key]) return inputs[key];
+    const sug = suggestions[key];
+    const load = sug?.loadKg != null && part.loadable ? adjustLoadKg(sug.loadKg, adjustments, units) : 0;
+    return { amount: sug?.target ?? defaultAmount(part), loadKg: load };
+  };
+  const setPartInput = (part: LogPart, patch: Partial<Inputs>) =>
+    setInputs((all) => ({ ...all, [partKey(step, part)]: { ...partInput(part), ...patch } }));
+  const stepSuggestions = step.parts.map((part) => ({ part, suggestion: suggestions[partKey(step, part)] }));
+  const stalled = stepSuggestions.some((x) => x.suggestion?.stalled);
 
   const next = circuit
     ? session.steps[state.stepIndex + 1] ?? (state.setIndex + 1 < step.sets ? session.steps[0] : undefined)
@@ -109,26 +119,37 @@ export default function GuidedSession() {
   const variantText = gentle && step.gentler ? step.gentler : currentMode === 'home' ? step.home : step.gym;
   const restCue = step.note ?? `Next: ${step.name.toLowerCase()}, set ${state.setIndex + 1}.`;
   const hasVersions = Boolean(step.home || step.gym) && !homeOnly;
-  const unitLabel = step.input === 'hold' ? 's' : 'reps';
 
   const onLog = () => {
     const setIndex = state.setIndex;
-    if (step.input === 'done') {
+    if (step.parts.length === 0) {
       recorder.log({ stepKey: step.key, exerciseId: step.exerciseIds[0] ?? null, setIndex });
       setToRate(null);
     } else {
-      const setId = recorder.log({
-        stepKey: step.key,
-        exerciseId: step.exerciseIds[0] ?? null,
-        setIndex,
-        reps: step.input === 'reps' ? input.amount : undefined,
-        seconds: step.input === 'hold' ? input.amount : undefined,
-        loadKg: input.loadKg > 0 ? input.loadKg : undefined,
+      const setIds = step.parts.map((part) => {
+        const v = partInput(part);
+        return recorder.log({
+          stepKey: step.key,
+          exerciseId: part.exerciseId,
+          setIndex,
+          reps: part.input === 'reps' ? v.amount : undefined,
+          seconds: part.input === 'hold' ? v.amount : undefined,
+          loadKg: v.loadKg > 0 ? v.loadKg : undefined,
+        });
       });
-      setToRate({ setId, label: `Set ${setIndex + 1} of the ${step.name.toLowerCase()}` });
+      // Circuits are timed: the effort is rated for the whole session at the end, not per round.
+      setToRate(circuit ? null : { setIds, label: `${circuit ? 'Round' : 'Set'} ${setIndex + 1} of the ${step.name.toLowerCase()}` });
     }
     setState((s) => logSet(session, s, Date.now()));
   };
+
+  const currentLabel = step.parts
+    .map((part) => {
+      const v = partInput(part);
+      const unit = part.input === 'hold' ? 's' : 'reps';
+      return `${v.amount} ${unit}${v.loadKg > 0 ? ` · ${formatLoad(v.loadKg, units)}` : ''}`;
+    })
+    .join(' + ');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.white }}>
@@ -189,10 +210,25 @@ export default function GuidedSession() {
             {step.rpe ? <Tag label={step.rpe} /> : null}
           </View>
 
-          {suggestion && state.setIndex === 0 && !circuit ? (
-            <ToneCard tone="latte" icon="sparkle" eyebrow={suggestion.kind === 'firstTime' ? 'First time' : 'Your +1 today'} title={suggestion.title} text={suggestion.detail} />
-          ) : null}
-          {suggestion?.stalled && state.setIndex === 0 ? (
+          {state.setIndex === 0
+            ? stepSuggestions.map(({ part, suggestion }) =>
+                suggestion ? (
+                  <ToneCard
+                    key={partKey(step, part)}
+                    tone="latte"
+                    icon="sparkle"
+                    eyebrow={suggestion.kind === 'firstTime' ? 'First time' : circuit ? 'Beat last round' : 'Your +1 today'}
+                    title={circuit && suggestion.kind === 'firstTime' ? `Count your reps on the ${part.name.toLowerCase()}` : suggestion.title}
+                    text={
+                      circuit && suggestion.kind === 'firstTime'
+                        ? 'Count the reps you do in the work window. Next time, the goal is one more.'
+                        : suggestion.detail
+                    }
+                  />
+                ) : null,
+              )
+            : null}
+          {stalled && state.setIndex === 0 ? (
             <ToneCard
               tone="fog"
               icon="target"
@@ -243,9 +279,7 @@ export default function GuidedSession() {
                   </View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt variant="bodyStrong" color={done ? tones.vanilla.strong : colors.ink}>
-                      {current && step.input !== 'done'
-                        ? `${input.amount} ${unitLabel}${input.loadKg > 0 ? ` · ${formatLoad(input.loadKg, units)}` : ''}`
-                        : step.target}
+                      {current && step.parts.length > 0 ? currentLabel : step.target}
                     </Txt>
                     <Txt variant="small" color={done ? tones.vanilla.soft : colors.grey}>
                       {done ? 'Logged' : current ? (resting ? 'After the rest' : 'Your turn') : 'Coming up'}
@@ -263,24 +297,35 @@ export default function GuidedSession() {
             })}
           </View>
 
-          {step.input !== 'done' ? (
-            <View style={styles.inputs}>
-              <Stepper
-                label={step.input === 'hold' ? 'Seconds' : 'Reps'}
-                value={String(input.amount)}
-                onMinus={() => setInput({ amount: Math.max(1, input.amount - (step.input === 'hold' ? 5 : 1)) })}
-                onPlus={() => setInput({ amount: input.amount + (step.input === 'hold' ? 5 : 1) })}
-              />
-              {step.input === 'reps' ? (
-                <Stepper
-                  label="Load"
-                  value={input.loadKg > 0 ? formatLoad(input.loadKg, units) : 'Bodyweight'}
-                  onMinus={() => setInput({ loadKg: stepLoadKg(input.loadKg, -1, units) })}
-                  onPlus={() => setInput({ loadKg: stepLoadKg(input.loadKg, 1, units) })}
-                />
-              ) : null}
-            </View>
-          ) : null}
+          {step.parts.map((part) => {
+            const v = partInput(part);
+            const hold = part.input === 'hold';
+            return (
+              <View key={partKey(step, part)} style={{ gap: 6 }}>
+                {step.parts.length > 1 ? (
+                  <Txt variant="meta" weight={600}>
+                    {part.name}
+                  </Txt>
+                ) : null}
+                <View style={styles.inputs}>
+                  <Stepper
+                    label={hold ? 'Seconds' : circuit ? `Reps in ${step.target.replace(' work', '')}` : 'Reps'}
+                    value={String(v.amount)}
+                    onMinus={() => setPartInput(part, { amount: Math.max(hold ? 5 : 0, v.amount - (hold ? 5 : 1)) })}
+                    onPlus={() => setPartInput(part, { amount: v.amount + (hold ? 5 : 1) })}
+                  />
+                  {part.loadable ? (
+                    <Stepper
+                      label="Load"
+                      value={v.loadKg > 0 ? formatLoad(v.loadKg, units) : 'Bodyweight'}
+                      onMinus={() => setPartInput(part, { loadKg: stepLoadKg(v.loadKg, -1, units) })}
+                      onPlus={() => setPartInput(part, { loadKg: stepLoadKg(v.loadKg, 1, units) })}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            );
+          })}
 
           {toRate ? (
             <View style={styles.rate}>
@@ -294,7 +339,7 @@ export default function GuidedSession() {
                     accessibilityRole="button"
                     accessibilityLabel={`RPE ${r}`}
                     onPress={() => {
-                      recorder.rate(toRate.setId, r);
+                      toRate.setIds.forEach((id) => recorder.rate(id, r));
                       setToRate(null);
                     }}
                     style={styles.rateChip}
@@ -367,12 +412,16 @@ export default function GuidedSession() {
   );
 }
 
-function defaultAmount(step: PlayableStep): number {
-  const t = step.line?.target;
-  if (!t) return 0;
+function partKey(step: PlayableStep, part: LogPart): string {
+  return `${step.key}|${part.exerciseId ?? part.name}`;
+}
+
+function defaultAmount(part: LogPart): number {
+  const t = part.line.target;
   if (t.kind === 'reps') return t.min;
   if (t.kind === 'hold') return t.minSeconds;
-  return 8;
+  // Circuit stations and "max − 2": start from a typical count, the user adjusts.
+  return 10;
 }
 
 const styles = StyleSheet.create({
