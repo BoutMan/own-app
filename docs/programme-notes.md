@@ -38,6 +38,8 @@ Chaque séance, règle et liste cite sa page. Ce fichier liste ce qui a été in
 | 2 semaines vides ou plus | p. 55 | Redémarrage au début du bloc en cours, −20 % toute la semaine |
 | Malade | p. 55 | −30 % (« reprise à 70 % ») ; sous le cou : message de repos |
 | Règles douloureuses | p. 55 | −20 %, exercices de gainage retirés, marche de 10 min à la place |
-| Supersets et circuits | — | On valide sans saisir de charge (accessoires, poids du corps, temps). À revoir si besoin |
-
-À trancher plus tard : les 2 signes de surentraînement (spec) supposent un suivi du sommeil et de la FC de repos (Apple Santé, V1) ; seule la stagnation est détectée pour l'instant.
+| Supersets | p. 27 et suiv. | Les deux mouvements sont saisis séparément (reps + charge), chacun avec son propre +1 |
+| Circuits (séance C) | p. 29 et suiv. | On compte les reps faites pendant la fenêtre de travail de chaque station ; le +1 = une rep de plus que le dernier tour. Historique séparé de celui des séances de force (un goblet squat en circuit ne se compare pas à un goblet squat lourd) |
+| 2 signes de surentraînement | spec | Signes lus sans Apple Santé : sommeil (check-in), irritabilité (humeur du check-in), motivation (énergie du check-in) — un score ≤ 3/10 ou en baisse de 2 points ou plus depuis le check-in précédent — et performance en baisse 3 séances de suite sur un mouvement principal. 2 signes → carte « Take my deload week now » sur Today. La FC de repos arrivera avec Apple Santé (V1) |
+| Deload anticipé | p. 23, p. 38 | Proposé après 2 signes ou une stagnation ; accepté, il applique la règle du deload (2 séries, −30 %) jusqu'au dimanche. Le programme ne recule pas d'une semaine |
+| « Missed twice » (Progress) | interprétation | Nombre de fois où l'utilisatrice est restée 2 semaines calendaires ou plus sans séance |
