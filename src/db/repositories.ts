@@ -145,6 +145,39 @@ export function exerciseHistory(
   }));
 }
 
+/**
+ * Strength gained this season, per loaded exercise: heaviest load of the first full-load workout
+ * against the heaviest since (reduced-load workouts left out). Biggest gain first.
+ */
+export function loadProgress(db: Db, season: number): { exerciseId: string; fromKg: number; toKg: number }[] {
+  const rows = db
+    .select({ exerciseId: setLogs.exerciseId, loadKg: setLogs.loadKg, startedAt: workouts.startedAt })
+    .from(setLogs)
+    .innerJoin(workouts, eq(setLogs.workoutId, workouts.id))
+    .where(and(eq(workouts.season, season), gte(workouts.loadFactor, 1), isNotNull(setLogs.exerciseId), isNotNull(setLogs.loadKg)))
+    .orderBy(workouts.startedAt)
+    .all();
+  const by = new Map<string, { first: string; fromKg: number; toKg: number }>();
+  for (const r of rows) {
+    const kg = r.loadKg!;
+    if (kg <= 0) continue;
+    const e = by.get(r.exerciseId!);
+    if (!e) by.set(r.exerciseId!, { first: r.startedAt, fromKg: kg, toKg: kg });
+    else {
+      if (r.startedAt === e.first) e.fromKg = Math.max(e.fromKg, kg);
+      e.toKg = Math.max(e.toKg, kg);
+    }
+  }
+  return [...by]
+    .map(([exerciseId, e]) => ({ exerciseId, fromKg: e.fromKg, toKg: e.toKg }))
+    .sort((a, b) => b.toKg - b.fromKg - (a.toKg - a.fromKg));
+}
+
+/** Minutes spent in finished workouts of a season ("just for me" on Me). */
+export function minutesTrained(db: Db, season: number): number {
+  return finishedWorkouts(db, season).reduce((m, w) => (w.endedAt ? m + Math.max(0, (Date.parse(w.endedAt) - Date.parse(w.startedAt)) / 60_000) : m), 0);
+}
+
 export function finishWorkout(db: Db, workoutId: string, feel: number | null, at = nowIso()): void {
   db.update(workouts).set({ endedAt: at, feel }).where(eq(workouts.id, workoutId)).run();
 }

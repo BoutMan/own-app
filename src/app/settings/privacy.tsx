@@ -7,7 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { CircleButton, Heading, Icon, ListGroup, ListRow, Pill, Screen, Switch, Txt, type IconName } from '@/components';
 import { photos } from '@/content/photos';
 import { useDb } from '@/db/DbProvider';
-import { eraseAll } from '@/db/repositories';
+import { eraseAll, eraseCycle } from '@/db/repositories';
 import { colors, photoHeader, radius, tones, type Tone } from '@/theme';
 
 type Place = { icon: IconName; tone: Tone | null; title: string; text: string; items: string[]; never?: boolean };
@@ -31,6 +31,7 @@ export default function Privacy() {
   const [health, setHealth] = useState(true);
   const [confirmErase, setConfirmErase] = useState(false);
   const [erased, setErased] = useState(false);
+  const [cycleStep, setCycleStep] = useState<'idle' | 'confirm' | 'done'>('idle');
   const { write } = useDb();
   // TODO(milestone 5): also delete the vault photo files.
   const erase = () => {
@@ -113,14 +114,22 @@ export default function Privacy() {
           <ListRow tileOnWhite icon="heart" tone="vanilla" label="Apple Health" detail="Read on your phone: steps, sleep, cycle" right={<Switch value={health} onChange={setHealth} accessibilityLabel="Apple Health" />} />
           <ListRow tileOnWhite icon="card" tone="vanilla" label="Your subscription" detail="Handled by the App Store, not by us" />
         </ListGroup>
-        {/* TODO(milestone 5): export (a file the user shares herself), erase and delete are real,
-            irreversible actions behind a confirmation. */}
+        {/* TODO(milestone 5): export as a file the user shares herself (share sheet). */}
         <View style={styles.actions}>
           {[
-            { icon: 'download' as const, title: 'Export my data', text: 'One file, in minutes' },
-            { icon: 'trash' as const, title: 'Erase my cycle', text: 'History wiped, tracking off' },
+            { icon: 'download' as const, title: 'Export my data', text: 'One file, in minutes', onPress: undefined },
+            {
+              icon: 'trash' as const,
+              title: 'Erase my cycle',
+              text: cycleStep === 'confirm' ? 'Tap again to erase' : cycleStep === 'done' ? 'Erased, tracking off' : 'History wiped, tracking off',
+              onPress: () => {
+                if (cycleStep !== 'confirm') return setCycleStep('confirm');
+                write((db) => eraseCycle(db));
+                setCycleStep('done');
+              },
+            },
           ].map((a) => (
-            <Pressable key={a.title} accessibilityRole="button" style={styles.action}>
+            <Pressable key={a.title} accessibilityRole="button" onPress={a.onPress} style={styles.action}>
               <View style={styles.actionIcon}>
                 <Icon name={a.icon} size={16} strokeWidth={1.8} />
               </View>

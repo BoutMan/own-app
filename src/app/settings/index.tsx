@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import {
   Button,
@@ -25,21 +25,37 @@ import { eraseAll } from '@/db/repositories';
 import type { WeekNumber } from '@/domain/programme';
 import { previewToolsEnabled, setPreviewWeek, usePreviewWeek } from '@/features/season/previewWeek';
 import { useSeason } from '@/features/season/currentWeek';
-import { colors, radius, tones } from '@/theme';
+import type { DayPlan } from '@/features/onboarding/schedule';
+import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
+import { colors, fontFamilyFor, radius, tones } from '@/theme';
 
-/** 26 · Settings. Values are local to the screen until preferences are persisted (milestone 4). */
+const EQUIPMENT_LABELS: Record<string, string> = { chair: 'Chair', band: 'Band', dumbbells: 'Dumbbells', kettlebell: 'Kettlebell', backpack: 'Backpack' };
+
+/** "18:30" → "6:30 pm". */
+function formatTime(hhmm: string): string {
+  const [h, m] = hhmm.split(':').map(Number);
+  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'am' : 'pm'}`;
+}
+
+/** Toggles a strength day; at most three (the programme has three sessions a week). */
+function toggleSessionDay(plan: readonly DayPlan[], i: number): DayPlan[] {
+  const next = [...plan];
+  if (next[i] === 'session') next[i] = 'rest';
+  else if (next.filter((d) => d === 'session').length < 3) next[i] = 'session';
+  return next;
+}
+
+/**
+ * 26 · Settings. Training, units and body preferences are stored on the device. Reminder switches
+ * stay on this screen until local notifications are scheduled (milestone 5).
+ */
 export default function Settings() {
-  const [place, setPlace] = useState<'home' | 'gym'>('home');
-  const [units, setUnits] = useState<'lb' | 'kg'>('lb');
-  const [days, setDays] = useState<number[]>([0, 2, 4]);
-  const [toggles, setToggles] = useState({
-    cycle: true,
-    grounded: true,
-    sessionReminder: true,
-    nightBefore: true,
-    sunday: true,
-    evening: false,
-  });
+  const profile = useProfile();
+  const update = useUpdateProfile();
+  const [name, setName] = useState<string | null>(null);
+  const days = profile.weekPlan.flatMap((d, i) => (d === 'session' ? [i] : []));
+  const equipment = profile.equipment.filter((e) => e in EQUIPMENT_LABELS);
+  const [toggles, setToggles] = useState({ sessionReminder: true, sunday: true, evening: false });
   const flip = (k: keyof typeof toggles) => (v: boolean) => setToggles((t) => ({ ...t, [k]: v }));
 
   return (
@@ -55,14 +71,38 @@ export default function Settings() {
       <View style={styles.profile}>
         <Image source={photos.morningWalk} style={styles.avatar} contentPosition={{ top: '20%', left: '50%' }} />
         <View style={{ flex: 1, gap: 2 }}>
-          <Txt variant="cardTitle" weight={600}>
-            Mia Carter
-          </Txt>
+          {name === null ? (
+            <Txt variant="cardTitle" weight={600}>
+              {profile.firstName ?? 'Your first name'}
+            </Txt>
+          ) : (
+            <TextInput
+              value={name}
+              onChangeText={setName}
+              accessibilityLabel="Your first name"
+              placeholder="Your first name"
+              placeholderTextColor={colors.grey}
+              autoFocus
+              maxLength={40}
+              style={styles.nameInput}
+            />
+          )}
           <Txt variant="meta" color={colors.grey}>
             Stored on this phone only
           </Txt>
         </View>
-        <Button label="Edit" variant="outline" style={{ height: 34, paddingHorizontal: 14 }} />
+        <Button
+          label={name === null ? 'Edit' : 'Save'}
+          variant="outline"
+          style={{ height: 34, paddingHorizontal: 14 }}
+          onPress={() => {
+            if (name === null) setName(profile.firstName ?? '');
+            else {
+              update({ firstName: name.trim() || null });
+              setName(null);
+            }
+          }}
+        />
       </View>
 
       <Pressable accessibilityRole="button" onPress={() => router.push('/settings/subscription')} style={styles.plan}>
@@ -84,41 +124,51 @@ export default function Settings() {
       <SectionLabel>Training</SectionLabel>
       <ListGroup>
         <ListRow icon="home" tone="vanilla" label="Where I train" right={
-          <SegmentedControl value={place} onChange={setPlace} options={[{ value: 'home', label: 'Home' }, { value: 'gym', label: 'Gym' }]} />
+          <SegmentedControl value={profile.place} onChange={(v) => update({ place: v })} options={[{ value: 'home', label: 'Home' }, { value: 'gym', label: 'Gym' }]} />
         } />
-        <ListRow icon="dumbbell" tone="latte" label="My equipment" value="3 items">
+        <ListRow icon="dumbbell" tone="latte" label="My equipment" value={equipment.length ? `${equipment.length} ${equipment.length === 1 ? 'item' : 'items'}` : 'None'}>
           <View style={styles.chips}>
-            {['Band', 'Backpack', 'Chair'].map((e) => (
-              <View key={e} style={styles.chip}>
-                <Txt variant="meta">{e}</Txt>
-              </View>
-            ))}
-            <View style={[styles.chip, styles.chipAdd]}>
-              <Txt variant="meta" color={colors.grey}>
-                + Add
-              </Txt>
-            </View>
+            {Object.entries(EQUIPMENT_LABELS).map(([id, label]) => {
+              const on = equipment.includes(id);
+              return (
+                <Pressable
+                  key={id}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: on }}
+                  onPress={() => update({ equipment: on ? equipment.filter((e) => e !== id) : [...equipment, id] })}
+                  style={[styles.chip, !on && styles.chipAdd]}
+                >
+                  <Txt variant="meta" color={on ? colors.ink : colors.grey}>
+                    {on ? label : `+ ${label}`}
+                  </Txt>
+                </Pressable>
+              );
+            })}
           </View>
         </ListRow>
-        <ListRow icon="calendar" tone="fog" label="Days & time" value="6:30 pm">
-          <DayCircles selected={days} onToggle={(i) => setDays((d) => (d.includes(i) ? d.filter((x) => x !== i) : [...d, i]))} />
+        <ListRow icon="calendar" tone="fog" label="Days & time" value={formatTime(profile.sessionTime)}>
+          <DayCircles selected={days} onToggle={(i) => update({ weekPlan: toggleSessionDay(profile.weekPlan, i) })} />
         </ListRow>
         <ListRow icon="bars" tone="mauve" label="Units" right={
-          <SegmentedControl value={units} onChange={setUnits} options={[{ value: 'lb', label: 'lb' }, { value: 'kg', label: 'kg' }]} />
+          <SegmentedControl
+            value={profile.units === 'metric' ? 'kg' : 'lb'}
+            onChange={(v) => update({ units: v === 'kg' ? 'metric' : 'imperial' })}
+            options={[{ value: 'lb', label: 'lb' }, { value: 'kg', label: 'kg' }]}
+          />
         } />
       </ListGroup>
 
       <SectionLabel>Body</SectionLabel>
       <ListGroup>
-        <ListRow icon="halfCircle" tone="mauve" label="Cycle tracking" detail="Sessions adapt to your phase" right={<Switch value={toggles.cycle} onChange={flip('cycle')} accessibilityLabel="Cycle tracking" />} />
-        <ListRow icon="home" tone="vanilla" label="Grounded versions" detail="No jumps, joint-friendly" right={<Switch value={toggles.grounded} onChange={flip('grounded')} accessibilityLabel="Grounded versions" />} />
+        <ListRow icon="halfCircle" tone="mauve" label="Cycle tracking" detail="A phase tip on your days" right={<Switch value={profile.cycleTracking} onChange={(v) => update({ cycleTracking: v })} accessibilityLabel="Cycle tracking" />} />
+        <ListRow icon="home" tone="vanilla" label="Grounded versions" detail="No jumps, joint-friendly" right={<Switch value={profile.groundedVersions} onChange={(v) => update({ groundedVersions: v })} accessibilityLabel="Grounded versions" />} />
         <ListRow icon="heart" tone="fog" label="Redo my health check" chevron onPress={() => router.push('/health-check')} />
       </ListGroup>
 
       <SectionLabel>Reminders</SectionLabel>
       <ListGroup>
         <ListRow tileOnWhite icon="timer" tone="vanilla" label="Session, 30 min before" right={<Switch value={toggles.sessionReminder} onChange={flip('sessionReminder')} accessibilityLabel="Session reminder" />} />
-        <ListRow tileOnWhite icon="shirt" tone="vanilla" label="Night before: lay out clothes" right={<Switch value={toggles.nightBefore} onChange={flip('nightBefore')} accessibilityLabel="Night-before reminder" />} />
+        <ListRow tileOnWhite icon="shirt" tone="vanilla" label="Night before: lay out clothes" right={<Switch value={profile.remindNightBefore} onChange={(v) => update({ remindNightBefore: v })} accessibilityLabel="Night-before reminder" />} />
         <ListRow tileOnWhite icon="check" tone="vanilla" label="Sunday check-in" right={<Switch value={toggles.sunday} onChange={flip('sunday')} accessibilityLabel="Sunday check-in" />} />
         <ListRow tileOnWhite icon="moon" tone="vanilla" label="Evening wind-down" right={<Switch value={toggles.evening} onChange={flip('evening')} accessibilityLabel="Evening wind-down reminder" />} />
       </ListGroup>
@@ -234,6 +284,7 @@ function PreviewTools() {
 }
 
 const styles = StyleSheet.create({
+  nameInput: { fontFamily: fontFamilyFor(600), fontSize: 17, color: colors.ink, padding: 0 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, paddingRight: 14, borderRadius: 24, borderWidth: 1, borderColor: colors.line, marginTop: 4 },
   avatar: { width: 58, height: 58, borderRadius: 18 },

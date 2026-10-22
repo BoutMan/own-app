@@ -32,7 +32,7 @@ describe('season position', () => {
   it('restarts the current block after two empty weeks', () => {
     // Weeks 1–6 done, then two weeks off: block 2 restarts at week 5.
     const p = seasonPosition(start, weeks(0, 1, 2, 3, 4, 5), day(8 * 7));
-    expect(p).toMatchObject({ week: 5, resume: { kind: 'restart', firstSessionOnly: false } });
+    expect(p).toMatchObject({ week: 5, resume: { kind: 'restart', firstSessionOnly: false }, restarts: 1 });
   });
 
   it('keeps going after the restart week', () => {

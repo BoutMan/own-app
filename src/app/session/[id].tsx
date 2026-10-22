@@ -27,6 +27,7 @@ import { adjustLoadKg, combinedFactor } from '@/domain/engine/adjustments';
 import { suggestNext, type Suggestion } from '@/domain/engine/plusOne';
 import { getSession, progressionRules, sessionsForWeek } from '@/domain/programme';
 import { formatLoad, stepLoadKg } from '@/domain/units';
+import { useProfile } from '@/features/profile/useProfile';
 import { useSeason, useUnits } from '@/features/season/currentWeek';
 import { applyVariant, capSets, isVariant, toPlayable, type LogPart, type PlayableStep } from '@/features/session/playable';
 import { RestRing } from '@/features/session/RestRing';
@@ -57,7 +58,8 @@ export default function GuidedSession() {
 
   const insets = useSafeAreaInsets();
   const [state, setState] = useState(() => startRunner(session, Date.now()));
-  const [mode, setMode] = useState<'home' | 'gym'>('home');
+  const place = useProfile().place;
+  const [mode, setMode] = useState<'home' | 'gym'>(place);
   const [gentle, setGentle] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [inputs, setInputs] = useState<Record<string, Inputs>>({});

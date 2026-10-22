@@ -6,8 +6,6 @@ import type { WeekDay } from '@/components';
  * Placeholder data for the static screens (milestone 1). Names, dates and numbers come from the
  * mockups and are fictional — never build logic on them. Replaced by the session engine later.
  */
-export const mockUser = { firstName: 'Mia' } as const;
-
 export const activityDot = {
   strength: colors.cocoa,
   zone2: tones.fog.ring,
@@ -24,41 +22,3 @@ export const mockWeek: readonly WeekDay[] = [
   { key: 'sun', weekday: 'Sun', date: '26', dot: activityDot.checkIn },
 ];
 
-export const mockToday = {
-  cyclePill: 'Follicular · good day for heavy',
-  ritualsSummary: '47% of today',
-  rituals: [
-    { key: 'morning', label: 'Morning flow', detail: '7 / 7 min · done at 7:42', percent: 100, tone: 'vanilla', icon: 'sun', done: true },
-    { key: 'steps', label: 'Steps', detail: '4,210 / 7,000', percent: 60, tone: 'latte', icon: 'steps' },
-    { key: 'water', label: 'Water', detail: '1.0 / 2 L', percent: 50, tone: 'fog', icon: 'water' },
-    { key: 'protein', label: 'Protein', detail: '1 / 4 palms', percent: 25, tone: 'mauve', icon: 'protein' },
-    { key: 'evening', label: 'Evening wind-down', detail: '0 / 10 min · tonight', percent: 0, tone: 'mocha', icon: 'moon' },
-  ],
-  myWhy: 'Getting up without that heavy tiredness, and feeling strong again.',
-  cycleDay: 9,
-} as const;
-
-export const mockMarkers = [
-  { label: 'Energy', icon: 'bolt', tone: 'vanilla', day0: 4, now: 6 },
-  { label: 'Sleep', icon: 'moon', tone: 'fog', day0: 5, now: 7 },
-  { label: 'Strength', icon: 'dumbbell', tone: 'latte', day0: 3, now: 6 },
-  { label: 'Breath', icon: 'breath', tone: 'fog', day0: 4, now: 5 },
-  { label: 'Posture & back', icon: 'posture', tone: 'mauve', day0: 5, now: 6 },
-  { label: 'Mood', icon: 'smile', tone: 'vanilla', day0: 5, now: 7 },
-  { label: 'Confidence', icon: 'crown', tone: 'mauve', day0: 3, now: 5 },
-] as const;
-
-export const mockWeekCard = {
-  title: 'week three',
-  accent: 'three',
-  range: 'oct 6 → oct 26',
-  lines: ['7 sessions kept', 'Squat 9 → 18 lb', 'Sleep 5 → 7 / 10', 'Never missed twice'],
-} as const;
-
-export const mockGoals = [
-  { label: '10 push-ups from my knees', detail: '7 / 10 · +3 since week 1', percent: 70, tone: 'vanilla', icon: 'dumbbell' },
-  { label: 'Four flights without stopping', detail: '3 / 4 flights', percent: 75, tone: 'fog', icon: 'stairs' },
-  { label: 'My black jeans fit again', detail: 'almost there', percent: 60, tone: 'mauve', icon: 'jeans' },
-] as const;
-
-export const mockFeelings = ['Strong', 'Rested', 'Confident'] as const;

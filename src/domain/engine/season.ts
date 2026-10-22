@@ -14,6 +14,8 @@ export type SeasonPosition = {
   extendedBy: number;
   /** Set when the user comes back after a gap. */
   resume: { kind: 'missedWeek' | 'restart'; firstSessionOnly: boolean } | null;
+  /** Times the user went two calendar weeks or more without training ("missed twice"). */
+  restarts: number;
   /** All 12 weeks done. */
   finished: boolean;
 };
@@ -43,9 +45,13 @@ export function seasonPosition(start: Date, workoutDates: readonly Date[], today
   let gap = 0;
   let extendedBy = 0;
   let resume: SeasonPosition['resume'] = null;
+  let restarts = 0;
   for (let c = 0; c < current; c++) {
     if (counts[c]! > 0) {
-      if (gap >= 2) week = Math.floor((week - 1) / 4) * 4 + 1; // restarted the block that week
+      if (gap >= 2) {
+        week = Math.floor((week - 1) / 4) * 4 + 1; // restarted the block that week
+        restarts++;
+      }
       week++;
       gap = 0;
     } else {
@@ -55,11 +61,12 @@ export function seasonPosition(start: Date, workoutDates: readonly Date[], today
   }
   if (gap === 1) resume = { kind: 'missedWeek', firstSessionOnly: true };
   if (gap >= 2) {
+    restarts++;
     week = Math.floor((week - 1) / 4) * 4 + 1;
     resume = { kind: 'restart', firstSessionOnly: false };
   }
   // The −10 % only applies to the first session back.
   if (resume?.firstSessionOnly && counts[current]! > 0) resume = null;
 
-  return { week: Math.min(week, 12) as WeekNumber, calendarWeek: current, extendedBy, resume, finished: week > 12 };
+  return { week: Math.min(week, 12) as WeekNumber, calendarWeek: current, extendedBy, resume, restarts, finished: week > 12 };
 }

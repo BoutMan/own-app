@@ -27,6 +27,7 @@ import {
   startSeason,
   startWorkout,
   DEFAULT_WEEK_PLAN,
+  loadProgress,
   workoutsInWeek,
 } from './repositories';
 import { runMigrations } from './migrate';
@@ -172,6 +173,24 @@ describe('on-device database', () => {
     expect(activeSeasonOf(db)?.startDate).toBe('2026-11-02');
     startWorkout(db, { sessionId: 'b1-a', season: 1, week: 1, mode: 'home' });
     expect(saveOnboarding(db, record('2027-01-25'))).toBe(2);
+  });
+
+  it('measures load gained per exercise on full-load workouts only', () => {
+    const db = testDb();
+    startSeason(db, '2026-10-05');
+    const at = (d: string, factor = 1) => startWorkout(db, { sessionId: 'b1-a', season: 1, week: 1, mode: 'home', loadFactor: factor }, `2026-10-${d}T18:00:00Z`);
+    const w1 = at('05');
+    logSet(db, w1, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 10, loadKg: 8 });
+    logSet(db, w1, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 1, reps: 10, loadKg: 9 });
+    const w2 = at('12', 0.7);
+    logSet(db, w2, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 10, loadKg: 20 });
+    const w3 = at('19');
+    logSet(db, w3, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 10, loadKg: 11 });
+    logSet(db, w3, { stepKey: '2', exerciseId: 'romanian-deadlift', setIndex: 0, reps: 10, loadKg: 12 });
+    expect(loadProgress(db, 1)).toEqual([
+      { exerciseId: 'goblet-squat', fromKg: 9, toKg: 11 },
+      { exerciseId: 'romanian-deadlift', fromKg: 12, toKg: 12 },
+    ]);
   });
 
   it('keeps one value per ritual and day', () => {

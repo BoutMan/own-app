@@ -14,16 +14,21 @@ import {
   PhotoHeader,
   PhotoTile,
   Pill,
-  QuoteCard,
   Screen,
   ToneCard,
   Txt,
   WeekStrip,
 } from '@/components';
-import { activityDot, mockToday, mockUser } from '@/content/mock';
+import { activityDot } from '@/content/mock';
 import { photos } from '@/content/photos';
+import { useDb, useQuery } from '@/db/DbProvider';
+import { ritualsOn, setRitual } from '@/db/repositories';
 import { mondayOf } from '@/domain/engine/season';
-import { formatLong } from '@/lib/dates';
+import { formatLong, isoDate } from '@/lib/dates';
+import type { DayPlan } from '@/features/onboarding/schedule';
+import { useCycle, useProfile } from '@/features/profile/useProfile';
+import { WhyCard } from '@/features/profile/WhyCard';
+import { nextRitualValue, RITUALS, ritualsPercent } from '@/features/rituals/rituals';
 import { useDeloadOffer } from '@/features/season/fatigue';
 import { useTodayPlan } from '@/features/season/today';
 import { colors } from '@/theme';
@@ -34,15 +39,19 @@ const legend = [
   { label: 'Check-in', color: activityDot.checkIn },
 ] as const;
 
-/** 12 · Today. The session and the +1 come from the programme and the logged sets; rituals, cycle and why are still mock. */
+/** 12 · Today. Everything here comes from the device: programme position, logged sets, rituals, cycle, profile. */
 export default function Today() {
-  const t = mockToday;
   const plan = useTodayPlan();
+  const profile = useProfile();
+  const cycle = useCycle();
+  const { write } = useDb();
+  const todayKey = isoDate(new Date());
+  const rituals = useQuery((db) => ritualsOn(db, todayKey), [todayKey]);
   const { session, week } = plan;
   const today = new Date();
   const hour = today.getHours();
   const moment = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
-  const weekDays = thisWeek(today);
+  const weekDays = thisWeek(today, profile.weekPlan);
   const [day, setDay] = useState(weekDays.find((d) => d.isToday)?.key ?? weekDays[0]!.key);
   const adjustment = plan.adjustments[0];
   const deload = useDeloadOffer(plan);
@@ -62,7 +71,7 @@ export default function Today() {
           </>
         }
       >
-        <Pill label={t.cyclePill} dot size="sm" />
+        {cycle.advice ? <Pill label={cycle.advice.pill} dot size="sm" /> : null}
         <Txt variant="eyebrow" color="rgba(255,255,255,0.88)" style={{ letterSpacing: 1.44, marginTop: 4 }}>
           {`Today · Session ${session.letter}`}
         </Txt>
@@ -70,7 +79,7 @@ export default function Today() {
           {session.name}
         </Heading>
         <Txt variant="body" size={14} color="rgba(255,255,255,0.9)">
-          {`${session.minutes} min · ${session.focus} · home`}
+          {`${session.minutes} min · ${session.focus} · ${profile.place}`}
         </Txt>
         <View style={styles.heroActions}>
           <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} onPress={() => router.push(`/session/${session.id}`)} />
@@ -85,7 +94,7 @@ export default function Today() {
             {`${formatLong(today)} · week ${week} of 12`}
           </Txt>
           <Heading variant="h1" size={34} accent={moment}>
-            {`Good ${moment}, ${mockUser.firstName}`}
+            {profile.firstName ? `Good ${moment}, ${profile.firstName}` : `Good ${moment}`}
           </Heading>
         </View>
 
@@ -138,20 +147,26 @@ export default function Today() {
               {"Today's rituals"}
             </Heading>
             <Txt variant="meta" color={colors.grey}>
-              {t.ritualsSummary}
+              {`${ritualsPercent(rituals)}% of today`}
             </Txt>
           </View>
-          {t.rituals.map((r) => (
-            <Gauge
-              key={r.key}
-              label={r.label}
-              detail={r.detail}
-              percent={r.percent}
-              tone={r.tone}
-              icon={r.icon}
-              done={'done' in r && r.done}
-            />
-          ))}
+          {RITUALS.map((r) => {
+            const v = rituals[r.kind] ?? 0;
+            return (
+              <Pressable
+                key={r.kind}
+                accessibilityRole="button"
+                accessibilityLabel={`${r.label}, ${r.detail(v)}`}
+                accessibilityHint={r.hint}
+                onPress={() => write((db) => setRitual(db, todayKey, r.kind, nextRitualValue(r, v)))}
+              >
+                <Gauge label={r.label} detail={r.detail(v)} percent={(v / r.goal) * 100} tone={r.tone} icon={r.icon} done={v >= r.goal} />
+              </Pressable>
+            );
+          })}
+          <Txt variant="small" color={colors.grey}>
+            Tap a ritual to add to it. Steps arrive with Apple Health.
+          </Txt>
         </View>
 
         <View style={{ gap: 12 }}>
@@ -160,25 +175,36 @@ export default function Today() {
           </Heading>
           <View style={styles.tiles}>
             <PhotoTile source={photos.matchaBowl} label="Sunday check-in" height={150} focus={{ top: '40%', left: '50%' }} style={{ flex: 1 }} onPress={() => router.push('/check-in')} />
-            <PhotoTile source={photos.iceSkincare} label={`Cycle · day ${t.cycleDay}`} height={150} style={{ flex: 1 }} onPress={() => router.push('/cycle')} />
+            <PhotoTile
+              source={photos.iceSkincare}
+              label={cycle.position ? `Cycle · day ${cycle.position.day}` : 'Cycle'}
+              height={150}
+              style={{ flex: 1 }}
+              onPress={() => router.push('/cycle')}
+            />
           </View>
         </View>
 
-        <QuoteCard quote={t.myWhy} caption="My why" actionLabel="Rewrite" />
+        <WhyCard />
       </Gutter>
     </Screen>
   );
 }
 
-// Activity of each weekday until the user's schedule is persisted (milestone 4): Mon/Wed/Fri strength, Sat walk, Sun check-in.
-const PLAN_DOTS = [activityDot.strength, undefined, activityDot.strength, undefined, activityDot.strength, activityDot.zone2, activityDot.checkIn];
 const WEEKDAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 
-function thisWeek(today: Date) {
+/** Dot of each weekday from the user's week (onboarding 6/7): strength, walk, and the Sunday check-in. */
+function dotFor(plan: DayPlan | undefined, i: number): string | undefined {
+  if (plan === 'session') return activityDot.strength;
+  if (plan === 'walk') return activityDot.zone2;
+  return i === 6 ? activityDot.checkIn : undefined;
+}
+
+function thisWeek(today: Date, plan: readonly DayPlan[]) {
   const monday = mondayOf(today);
   return WEEKDAY.map((weekday, i) => {
     const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
-    return { key: weekday.toLowerCase(), weekday, date: String(d.getDate()), dot: PLAN_DOTS[i], isToday: d.toDateString() === today.toDateString() };
+    return { key: weekday.toLowerCase(), weekday, date: String(d.getDate()), dot: dotFor(plan[i], i), isToday: d.toDateString() === today.toDateString() };
   });
 }
 

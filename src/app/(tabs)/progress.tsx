@@ -5,7 +5,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Gauge, Gutter, Heading, Icon, Logo, PhotoHeader, PhotoTile, Pill, Screen, StatTiles, Txt } from '@/components';
-import { mockMarkers, mockWeekCard } from '@/content/mock';
+import { useUnits } from '@/features/season/currentWeek';
+import { useGlowCard, useMarkers } from '@/features/season/glow';
 import { useSeasonSummary } from '@/features/season/today';
 import { photos } from '@/content/photos';
 import { colors, radius, tones } from '@/theme';
@@ -13,7 +14,10 @@ import { colors, radius, tones } from '@/theme';
 /** 15 · Progress — glow card, counters, the seven markers against day 0, photo vault. */
 export default function Progress() {
   const s = useSeasonSummary();
-  const w = mockWeekCard;
+  const units = useUnits();
+  const markers = useMarkers(s.plan.season);
+  const w = useGlowCard(s.plan, markers, units);
+  const rated = markers.filter((m) => m.now != null || m.day0 != null);
   const insets = useSafeAreaInsets();
   return (
     <Screen padTop={false}>
@@ -74,7 +78,7 @@ export default function Progress() {
           stats={[
             { value: String(s.sessionsKept), label: 'sessions kept', tone: 'vanilla' },
             { value: String(s.sessionsTotal - s.sessionsKept), label: `to go of ${s.sessionsTotal}`, tone: 'latte' },
-            { value: '0', label: 'missed twice', tone: 'mauve' },
+            { value: String(s.plan.restarts), label: 'missed twice', tone: 'mauve' },
           ]}
         />
 
@@ -101,19 +105,29 @@ export default function Progress() {
               </Txt>
             </View>
           </View>
-          {mockMarkers.map((m) => (
-            <Gauge
-              key={m.label}
-              label={m.label}
-              detail={`Day 0: ${m.day0} · now: ${m.now}`}
-              percent={m.now * 10}
-              baseline={m.day0 * 10}
-              tone={m.tone}
-              icon={m.icon}
-              value={`${m.now - m.day0 >= 0 ? '+' : ''}${m.now - m.day0}`}
-              height={58}
-            />
-          ))}
+          {rated.length === 0 ? (
+            <Txt variant="meta" color={colors.grey}>
+              Rate them at the start of your season, then at each block review and in the Sunday check-in.
+            </Txt>
+          ) : (
+            rated.map((m) => {
+              const now = m.now ?? m.day0!;
+              const diff = m.day0 != null && m.now != null ? m.now - m.day0 : null;
+              return (
+                <Gauge
+                  key={m.id}
+                  label={m.label}
+                  detail={m.day0 != null ? `Day 0: ${m.day0} · now: ${now}` : `Now: ${now}`}
+                  percent={now * 10}
+                  baseline={m.day0 != null ? m.day0 * 10 : undefined}
+                  tone={m.tone}
+                  icon={m.icon}
+                  value={diff == null ? `${now}/10` : `${diff >= 0 ? '+' : ''}${diff}`}
+                  height={58}
+                />
+              );
+            })
+          )}
         </View>
 
         <View style={{ gap: 12 }}>

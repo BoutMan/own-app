@@ -20,11 +20,12 @@ import {
 } from '@/components';
 import { photos, type PhotoKey } from '@/content/photos';
 import { blockForWeek, blocks, formatRpe, sessionsForWeek, weekRule, type WeekNumber } from '@/domain/programme';
+import { sessionLetters } from '@/features/onboarding/schedule';
+import { useProfile } from '@/features/profile/useProfile';
 import { useSeasonSummary } from '@/features/season/today';
 import { colors, radius, type Tone } from '@/theme';
 
-// Weekday of each session until the user's own schedule is persisted (milestone 4).
-const DAY_OF = { A: 'Mon', B: 'Wed', C: 'Fri' } as const;
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
 const ROW_STYLE: { tone: Tone; photo: PhotoKey }[] = [
   { tone: 'latte', photo: 'backFlexRed' },
   { tone: 'mauve', photo: 'reverseLunge' },
@@ -36,6 +37,12 @@ export default function Programme() {
   const week = s.week;
   const block = blockForWeek(week);
   const today = s.plan.session;
+  // Weekday of each session from the user's own week (onboarding 6/7).
+  const { weekPlan } = useProfile();
+  const dayOf: Partial<Record<string, string>> = {};
+  sessionLetters(weekPlan).forEach((l, i) => {
+    if (l) dayOf[l] = WEEKDAYS[i];
+  });
   const rest = sessionsForWeek(week).filter((x) => x.id !== today.id);
   const done = s.plan.doneThisWeek;
   const rule = weekRule(week);
@@ -121,7 +128,7 @@ export default function Programme() {
               source={photos[ROW_STYLE[i]!.photo]}
               title={session.name}
               text={`${session.minutes} min · ${session.focus}`}
-              right={<Tag label={done.includes(session.id) ? 'Done' : DAY_OF[session.letter]} tone={ROW_STYLE[i]!.tone} weight={600} />}
+              right={<Tag label={done.includes(session.id) ? 'Done' : dayOf[session.letter] ?? session.letter} tone={ROW_STYLE[i]!.tone} weight={600} />}
               onPress={() => router.push(`/session/${session.id}`)}
             />
           ))}

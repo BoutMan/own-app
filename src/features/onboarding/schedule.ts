@@ -31,7 +31,7 @@ export function cycleDay(plan: WeekPlan, index: number): WeekPlan {
 }
 
 /** Session letter for each day (A, B, C in weekday order), or null. */
-export function sessionLetters(plan: WeekPlan): (string | null)[] {
+export function sessionLetters(plan: readonly DayPlan[]): (string | null)[] {
   let n = 0;
   return plan.map((d) => (d === 'session' ? (SESSION_LETTERS[n++] ?? null) : null));
 }

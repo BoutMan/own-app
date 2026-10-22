@@ -13,14 +13,17 @@ import {
   PhotoHeader,
   PhotoTile,
   Pill,
-  QuoteCard,
   Screen,
   SeasonBar,
   StatTiles,
   Txt,
   type IconName,
 } from '@/components';
-import { mockFeelings, mockGoals, mockToday, mockUser } from '@/content/mock';
+import { useQuery } from '@/db/DbProvider';
+import { activeDays, minutesTrained, seasonGoals } from '@/db/repositories';
+import { blockForWeek } from '@/domain/programme';
+import { useCycle, useProfile } from '@/features/profile/useProfile';
+import { WhyCard } from '@/features/profile/WhyCard';
 import { useSeasonSummary } from '@/features/season/today';
 import { photos, type PhotoKey } from '@/content/photos';
 import { colors, tones, type Tone } from '@/theme';
@@ -35,16 +38,40 @@ const badges: Badge[] = [
   { label: 'Full season', earned: false, icon: 'lock' },
 ];
 
-const space: { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/review/1' | '/my-contract'; lock?: boolean }[] = [
-  { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
-  { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
-  { label: `My cycle · day ${mockToday.cycleDay}`, photo: 'iceSkincare', href: '/cycle' },
-  { label: 'My circle · 8', photo: 'streetAbsMatcha', href: '/circle' },
-];
+type SpaceTile = { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/review/1' | '/my-contract'; lock?: boolean };
+
+const goalStyle: Record<string, { tone: Tone; icon: IconName }> = {
+  performance: { tone: 'vanilla', icon: 'dumbbell' },
+  sensation: { tone: 'fog', icon: 'heart' },
+  free: { tone: 'mauve', icon: 'star' },
+};
+
+function formatMinutes(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  return h > 0 ? `${h}h${String(m).padStart(2, '0')}` : `${m} min`;
+}
 
 /** 25 · Me — profile, season, my why, goals, badges, shortcuts, plan. */
 export default function Me() {
   const s = useSeasonSummary();
+  const profile = useProfile();
+  const cycle = useCycle();
+  const season = s.plan.season;
+  const data = useQuery(
+    (db) =>
+      season === null
+        ? { goals: [], minutes: 0, active: 0 }
+        : { goals: seasonGoals(db, season), minutes: minutesTrained(db, season), active: activeDays(db, s.plan.startDate.toISOString()) },
+    [season, s.plan.startDate],
+  );
+  const block = blockForWeek(s.week);
+  const space: SpaceTile[] = [
+    { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
+    { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
+    { label: cycle.position ? `My cycle · day ${cycle.position.day}` : 'My cycle', photo: 'iceSkincare', href: '/cycle' },
+    { label: 'My circle', photo: 'streetAbsMatcha', href: '/circle' },
+  ];
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -66,11 +93,13 @@ export default function Me() {
         <View style={styles.nameRow}>
           <View style={{ gap: 6, flex: 1 }}>
             <Heading variant="heroXL" on="photo" style={{ letterSpacing: -4.16, lineHeight: 58 }}>
-              {mockUser.firstName}
+              {profile.firstName ?? 'Me'}
             </Heading>
-            <Txt variant="body" size={14} color="rgba(255,255,255,0.9)">
-              {mockFeelings.join(' · ')}
-            </Txt>
+            {profile.feelings.length ? (
+              <Txt variant="body" size={14} color="rgba(255,255,255,0.9)">
+                {profile.feelings.join(' · ')}
+              </Txt>
+            ) : null}
           </View>
           <Button label="Edit profile" variant="ghost" style={{ height: 36, paddingHorizontal: 14 }} onPress={() => router.push('/settings')} />
         </View>
@@ -86,7 +115,7 @@ export default function Me() {
           </View>
           <SeasonBar weeksDone={s.week - 1} currentWeekProgress={s.weekProgress} />
           <View style={styles.rowBetween}>
-            {[`Started ${s.started}`, 'Block 1 · Foundations', `Ends ${s.ends}`].map((l) => (
+            {[`Started ${s.started}`, `Block ${block.number} · ${block.name}`, `Ends ${s.ends}`].map((l) => (
               <Txt key={l} variant="small" color={colors.grey}>
                 {l}
               </Txt>
@@ -97,12 +126,12 @@ export default function Me() {
         <StatTiles
           stats={[
             { value: String(s.sessionsKept), label: 'sessions kept', tone: 'vanilla' },
-            { value: '4h12', label: 'just for me', tone: 'mauve' },
-            { value: '12', label: 'active days', tone: 'fog' },
+            { value: formatMinutes(data.minutes), label: 'just for me', tone: 'mauve' },
+            { value: String(data.active), label: 'active days', tone: 'fog' },
           ]}
         />
 
-        <QuoteCard quote={mockToday.myWhy} caption={`My why · ${s.started}`} actionLabel="Rewrite" />
+        <WhyCard caption={`My why · ${s.started}`} />
 
         <View style={{ gap: 10 }}>
           <View style={styles.rowBetween}>
@@ -110,12 +139,26 @@ export default function Me() {
               My goals
             </Heading>
             <Txt variant="meta" color={colors.grey}>
-              3 for this season
+              {`${data.goals.length} for this season`}
             </Txt>
           </View>
-          {mockGoals.map((g) => (
-            <Gauge key={g.label} label={g.label} detail={g.detail} percent={g.percent} tone={g.tone} icon={g.icon} />
-          ))}
+          {data.goals.length === 0 ? (
+            <Txt variant="meta" color={colors.grey}>
+              Your goals are set when you start a season. They are measured at each block review.
+            </Txt>
+          ) : (
+            data.goals.map((g) => (
+              <Gauge
+                key={g.id}
+                label={g.text}
+                detail={g.progress == null ? (g.baseline ? `Today: ${g.baseline} · measured at the block review` : 'Measured at the block review') : `${g.progress}% there`}
+                percent={g.progress ?? 0}
+                tone={goalStyle[g.slot]!.tone}
+                icon={goalStyle[g.slot]!.icon}
+                value={g.progress == null ? '–' : undefined}
+              />
+            ))
+          )}
         </View>
 
         <View style={{ gap: 12 }}>
