@@ -1,14 +1,17 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { Button, Txt } from '@/components';
 import { photos } from '@/content/photos';
+import { useDb } from '@/db/DbProvider';
+import { saveOnboarding } from '@/db/repositories';
 import { formatShort, seasonEnd } from '@/lib/dates';
 import { useOnboarding } from '@/features/onboarding/OnboardingContext';
 import { SignaturePad } from '@/features/onboarding/SignaturePad';
 import { StepScreen } from '@/features/onboarding/ui';
-import { colors } from '@/theme';
+import { toOnboardingRecord } from '@/features/onboarding/record';
+import { colors, fontFamilyFor } from '@/theme';
 
 // The six commitments of the guide's contract, as worded in the mockup.
 const commitments = [
@@ -20,9 +23,14 @@ const commitments = [
   'Start again, as often as it takes',
 ] as const;
 
-/** 09 · Onboarding 7/7 — the contract, signed with a finger. */
+/** 09 · Onboarding 7/7 — the contract, signed with a finger. Signing stores the onboarding on the device. */
 export default function Contract() {
   const { answers, update } = useOnboarding();
+  const { write } = useDb();
+  const sign = () => {
+    write((db) => saveOnboarding(db, toOnboardingRecord(answers, new Date())));
+    router.push('/ready');
+  };
   const range = `${formatShort(answers.startDate)} → ${formatShort(seasonEnd(answers.startDate))}`.toLowerCase();
   return (
     <StepScreen
@@ -32,7 +40,7 @@ export default function Contract() {
       gap={18}
       footer={
         <>
-          <Button label="Sign & start my season" size="lg" disabled={!answers.signed} onPress={() => router.push('/ready')} />
+          <Button label="Sign & start my season" size="lg" disabled={!answers.signed} onPress={sign} />
           {/* TODO(milestone 5): share sheet with the start date. */}
           <Pressable accessibilityRole="button" style={{ alignSelf: 'center' }} hitSlop={8}>
             <Txt variant="body" size={14} color={colors.grey}>
@@ -53,6 +61,18 @@ export default function Contract() {
               {range}
             </Txt>
           </View>
+          <TextInput
+            value={answers.firstName}
+            onChangeText={(t) => update('firstName', t)}
+            placeholder="I am… (your first name)"
+            placeholderTextColor={colors.grey}
+            accessibilityLabel="Your first name"
+            autoCapitalize="words"
+            autoComplete="given-name"
+            textContentType="givenName"
+            maxLength={40}
+            style={styles.name}
+          />
           <View style={{ gap: 7 }}>
             {commitments.map((c, i) => (
               <View key={c} style={styles.item}>
@@ -81,4 +101,8 @@ const styles = StyleSheet.create({
   },
   paperHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   item: { flexDirection: 'row', gap: 10 },
+  name: {
+    fontFamily: fontFamilyFor(600), fontSize: 17, letterSpacing: -0.34, color: colors.ink,
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.line,
+  },
 });

@@ -26,6 +26,7 @@ import {
   saveCheckIn,
   startSeason,
   startWorkout,
+  DEFAULT_WEEK_PLAN,
   workoutsInWeek,
 } from './repositories';
 import { runMigrations } from './migrate';
@@ -155,6 +156,22 @@ describe('on-device database', () => {
     expect(activeSeasonOf(db)?.startDate).toBe('2026-10-26');
     updateProfile(db, { units: 'metric' });
     expect(getProfile(db)?.units).toBe('metric');
+  });
+
+  it('replaces an untrained season when onboarding is done again, keeps a trained one', () => {
+    const db = testDb();
+    const record = (startDate: string) => ({
+      firstName: null, feelings: [], goals: [{ slot: 'performance' as const, text: 'Ten push-ups', baseline: null }],
+      health: { pregnancyOrPostpartum: false, medicalCondition: false, injuryOrSurgery: false, noTrainingTwoYears: false, pelvicLeaking: false, pelvicHeaviness: false, pelvicUrgency: false },
+      place: 'home' as const, equipment: [], markers: { energy: 5 }, weekPlan: [...DEFAULT_WEEK_PLAN], addToCalendar: true, remindNightBefore: true,
+      startDate, signedAt: '2026-10-22T10:00:00Z',
+    });
+    expect(saveOnboarding(db, record('2026-10-26'))).toBe(1);
+    expect(saveOnboarding(db, record('2026-11-02'))).toBe(1);
+    expect(seasonGoals(db, 1)).toHaveLength(1);
+    expect(activeSeasonOf(db)?.startDate).toBe('2026-11-02');
+    startWorkout(db, { sessionId: 'b1-a', season: 1, week: 1, mode: 'home' });
+    expect(saveOnboarding(db, record('2027-01-25'))).toBe(2);
   });
 
   it('keeps one value per ritual and day', () => {

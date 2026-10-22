@@ -23,6 +23,7 @@ export type Equipment = (typeof EQUIPMENT)[number];
 export type Goal = { text: string; today: string };
 
 export type OnboardingAnswers = {
+  firstName: string;
   feelings: Feeling[];
   goals: [Goal, Goal, Goal];
   health: Record<HealthFlag, boolean>;
@@ -42,6 +43,7 @@ const emptyGoal: Goal = { text: '', today: '' };
 
 function initialAnswers(): OnboardingAnswers {
   return {
+    firstName: '',
     feelings: [],
     goals: [emptyGoal, emptyGoal, emptyGoal],
     health: { pregnancy: false, condition: false, injury: false, longBreak: false },
@@ -66,7 +68,7 @@ const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 
 /**
  * Holds the answers while the user goes through onboarding.
- * In-memory only for now: persistence (SQLite) lands with milestone 4.
+ * In memory until the contract is signed, then stored on the device in one go (record.ts).
  */
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [answers, setAnswers] = useState(initialAnswers);

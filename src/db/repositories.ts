@@ -251,9 +251,12 @@ export function saveOnboarding(db: Db, r: OnboardingRecord): number {
       .onConflictDoUpdate({ target: healthAnswers.id, set: { ...r.health, updatedAt: nowIso() } })
       .run();
 
+    // A season opened but never trained (onboarding done again) is replaced, not archived.
     const current = tx.select().from(seasons).orderBy(desc(seasons.number)).get();
+    const untouched = current?.status === 'active' && !tx.select({ id: workouts.id }).from(workouts).where(eq(workouts.season, current.number)).get();
+    if (untouched) tx.delete(seasons).where(eq(seasons.number, current.number)).run();
     tx.update(seasons).set({ status: 'done' }).where(eq(seasons.status, 'active')).run();
-    const season = (current?.number ?? 0) + 1;
+    const season = untouched ? current.number : (current?.number ?? 0) + 1;
     tx.insert(seasons).values({ number: season, startDate: r.startDate }).run();
 
     for (const g of r.goals.filter((x) => x.text.trim())) {
