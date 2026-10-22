@@ -24,6 +24,7 @@ import { activityDot, mockToday, mockUser } from '@/content/mock';
 import { photos } from '@/content/photos';
 import { mondayOf } from '@/domain/engine/season';
 import { formatLong } from '@/lib/dates';
+import { useDeloadOffer } from '@/features/season/fatigue';
 import { useTodayPlan } from '@/features/season/today';
 import { colors } from '@/theme';
 
@@ -44,6 +45,7 @@ export default function Today() {
   const weekDays = thisWeek(today);
   const [day, setDay] = useState(weekDays.find((d) => d.isToday)?.key ?? weekDays[0]!.key);
   const adjustment = plan.adjustments[0];
+  const deload = useDeloadOffer(plan);
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -101,6 +103,12 @@ export default function Today() {
           </View>
         </View>
 
+        {deload.offer ? (
+          <View style={{ gap: 8 }}>
+            <ToneCard tone="mauve" icon="leaf" eyebrow={deload.offer.reason === 'fatigue' ? 'Two signs of fatigue' : 'Stall'} title={deload.offer.title} text={deload.offer.text} />
+            <Button label="Take my deload week now" variant="outline" onPress={deload.take} />
+          </View>
+        ) : null}
         {adjustment ? <ToneCard tone="vanilla" icon="leaf" eyebrow={`Week ${week}`} title={adjustment.title} text={adjustment.message} /> : null}
         {plan.plusOne ? (
           <ToneCard

@@ -5,7 +5,7 @@
 import { missedTraining, weekRule, type WeekNumber } from '@/domain/programme';
 import { scaleLoadKg, type UnitSystem } from '@/domain/units';
 
-export type AdjustmentReason = 'deload' | 'testWeek' | 'missedWeek' | 'restart' | 'illness' | 'period' | 'soreness';
+export type AdjustmentReason = 'deload' | 'earlyDeload' | 'testWeek' | 'missedWeek' | 'restart' | 'illness' | 'period' | 'soreness';
 
 export type Adjustment = { reason: AdjustmentReason; factor: number; title: string; message: string };
 
@@ -32,6 +32,12 @@ export function weekAdjustment(week: WeekNumber): Adjustment | null {
 }
 
 export const caseAdjustments = {
+  earlyDeload: {
+    reason: 'earlyDeload',
+    factor: 0.7,
+    title: 'Deload week, a little early',
+    message: '2 sets, loads −30 % until Sunday. Your body asked for it: next week you pick up where you were, fresher.',
+  },
   missedWeek: {
     reason: 'missedWeek',
     factor: missedTraining.oneWeek.loadFactor,

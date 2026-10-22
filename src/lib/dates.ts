@@ -31,3 +31,8 @@ export function formatShort(date: Date): string {
 export function formatLong(date: Date): string {
   return `${WEEKDAYS[date.getDay()]}, ${formatShort(date)}`;
 }
+
+/** Local calendar date as "2026-10-27". */
+export function isoDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

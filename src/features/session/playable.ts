@@ -216,6 +216,12 @@ export function toPlayable(session: Session, week: WeekNumber): PlayableSession 
   };
 }
 
+/** Early deload (stall or two signs of fatigue): the deload-week rule, 2 sets per strength line (p. 23). */
+export function capSets(session: PlayableSession, max: number): PlayableSession {
+  if (session.kind !== 'strength') return session;
+  return { ...session, steps: session.steps.map((st) => (st.sets > max ? { ...st, sets: max } : st)) };
+}
+
 /** The seven "My week is complicated" cases (guide p. 55) that change today's session. */
 export type Variant = 'full' | 'short' | 'away' | 'ill' | 'period' | 'packed' | 'noKit';
 

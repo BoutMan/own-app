@@ -7,6 +7,7 @@ import { caseAdjustments, weekAdjustment, type Adjustment } from '@/domain/engin
 import { mondayOf, seasonPosition, type SeasonPosition } from '@/domain/engine/season';
 import type { WeekNumber } from '@/domain/programme';
 import type { UnitSystem } from '@/domain/units';
+import { isoDate } from '@/lib/dates';
 
 import { usePreviewWeek } from './previewWeek';
 
@@ -29,7 +30,8 @@ export function useSeason(): SeasonState {
   const preview = usePreviewWeek();
   const data = useQuery((db) => {
     const s = activeSeason(db);
-    return s ? { season: s.number, startDate: s.startDate, workouts: finishedWorkouts(db, s.number) } : null;
+    const earlyDeloadWeekOf = db.select({ v: profile.earlyDeloadWeekOf }).from(profile).get()?.v ?? null;
+    return s ? { season: s.number, startDate: s.startDate, workouts: finishedWorkouts(db, s.number), earlyDeloadWeekOf } : null;
   });
 
   return useMemo(() => {
@@ -41,6 +43,7 @@ export function useSeason(): SeasonState {
     const adjustments: Adjustment[] = [];
     const wa = weekAdjustment(week);
     if (wa) adjustments.push(wa);
+    else if (!preview && data?.earlyDeloadWeekOf === isoDate(mondayOf(today))) adjustments.push(caseAdjustments.earlyDeload);
     if (!preview && pos.resume) adjustments.push(pos.resume.kind === 'restart' ? caseAdjustments.restart : caseAdjustments.missedWeek);
     return {
       ...pos,

@@ -1,39 +1,64 @@
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { CircleButton, CTA, Gauge, Gutter, Heading, Icon, PhotoHeader, Pill, Screen, Txt, type IconName } from '@/components';
 import { photos } from '@/content/photos';
+import { useDb, useQuery } from '@/db/DbProvider';
+import { checkInFor, saveCheckIn, startSeason, type CheckIn as CheckInValues } from '@/db/repositories';
+import { mondayOf } from '@/domain/engine/season';
+import { sessionsForWeek } from '@/domain/programme';
 import { DotRating } from '@/features/onboarding/ui';
+import { useTodayPlan } from '@/features/season/today';
+import { isoDate } from '@/lib/dates';
 import { colors, fontFamilyFor, tones, type Tone } from '@/theme';
 
-// Mock week until sessions are stored (milestone 3).
-const week: { key: string; big: string; small: string; tone: Tone; done: 'full' | 'half' }[] = [
-  { key: 'a', big: 'A', small: 'Anchor', tone: 'vanilla', done: 'full' },
-  { key: 'b', big: 'B', small: 'Hinge', tone: 'latte', done: 'full' },
-  { key: 'c', big: 'C', small: '10-min', tone: 'mauve', done: 'half' },
-  { key: 'walk', big: 'Walk', small: 'Zone 2', tone: 'fog', done: 'full' },
-];
-
-const lastWeek = { Energy: 6, Sleep: 5, Mood: 7 } as const;
-type Feeling = keyof typeof lastWeek;
+const feelings = ['Energy', 'Sleep', 'Mood'] as const;
+type Feeling = (typeof feelings)[number];
+const column = { Energy: 'energy', Sleep: 'sleep', Mood: 'mood' } as const satisfies Record<Feeling, keyof CheckInValues>;
+type Line = 'win' | 'stuck' | 'adjust';
+const sessionTones: Tone[] = ['vanilla', 'latte', 'mauve'];
 const feelingMeta: Record<Feeling, { icon: IconName; tone: Tone }> = {
   Energy: { icon: 'bolt', tone: 'vanilla' },
   Sleep: { icon: 'moon', tone: 'fog' },
   Mood: { icon: 'smile', tone: 'mauve' },
 };
 
-const prompts: { key: string; label: string; icon: IconName; tone: Tone; placeholder: string }[] = [
+const prompts: { key: Line; label: string; icon: IconName; tone: Tone; placeholder: string }[] = [
   { key: 'win', label: 'Win of the week', icon: 'sparkle', tone: 'latte', placeholder: 'First goblet squat at 18 lb' },
   { key: 'stuck', label: 'What got stuck', icon: 'note', tone: 'mauve', placeholder: 'Friday: late meeting, only 10 min' },
   { key: 'adjust', label: "What I'm adjusting", icon: 'repeat', tone: 'fog', placeholder: 'Move C to Saturday morning' },
 ];
 
-/** 21 · Sunday check-in — two minutes: the week, how it felt, three lines. */
+/**
+ * 21 · Sunday check-in — two minutes: the week, how it felt, three lines. Stored on the device; the
+ * scores feed the overtraining signs (sleep, irritability, motivation) and the block reviews.
+ */
 export default function CheckIn() {
-  const [ratings, setRatings] = useState<Record<Feeling, number | null>>({ Energy: null, Sleep: null, Mood: null });
-  const [lines, setLines] = useState<Record<string, string>>({});
+  const { write } = useDb();
+  const plan = useTodayPlan();
+  const { week } = plan;
+  const saved = useQuery((db) => {
+    if (plan.season === null) return { now: undefined, before: undefined };
+    return { now: checkInFor(db, plan.season, week), before: week > 1 ? checkInFor(db, plan.season, week - 1) : undefined };
+  }, [plan.season, week]);
+  const [ratings, setRatings] = useState<Record<Feeling, number | null>>(() => ({
+    Energy: saved.now?.energy ?? null,
+    Sleep: saved.now?.sleep ?? null,
+    Mood: saved.now?.mood ?? null,
+  }));
+  const [lines, setLines] = useState<Record<Line, string>>(() => ({ win: saved.now?.win ?? '', stuck: saved.now?.stuck ?? '', adjust: saved.now?.adjust ?? '' }));
+  const sessions = useMemo(() => sessionsForWeek(week), [week]);
+  const done = sessions.filter((s) => plan.doneThisWeek.includes(s.id)).length;
+
+  const save = () => {
+    const values: CheckInValues = {};
+    for (const f of feelings) if (ratings[f] != null) values[column[f]] = ratings[f]!;
+    for (const k of ['win', 'stuck', 'adjust'] as const) if (lines[k].trim()) values[k] = lines[k].trim();
+    write((db) => saveCheckIn(db, plan.season ?? startSeason(db, isoDate(mondayOf(new Date()))), week, values));
+    router.back();
+  };
 
   return (
     <Screen padTop={false}>
@@ -45,7 +70,7 @@ export default function CheckIn() {
         top={
           <>
             <CircleButton icon="close" surface="white" accessibilityLabel="Close" onPress={() => router.back()} />
-            <Pill label="Week 3 · 2 minutes" dot size="sm" />
+            <Pill label={`Week ${week} · 2 minutes`} dot size="sm" />
           </>
         }
       >
@@ -67,22 +92,23 @@ export default function CheckIn() {
               Your week
             </Heading>
             <Txt variant="meta" color={colors.grey}>
-              3½ of 4
+              {`${done} of ${sessions.length}`}
             </Txt>
           </View>
           <View style={styles.week}>
-            {week.map((w) => {
-              const t = tones[w.tone];
+            {sessions.map((s, i) => {
+              const t = tones[sessionTones[i] ?? 'fog'];
+              const isDone = plan.doneThisWeek.includes(s.id);
               return (
-                <View key={w.key} style={[styles.weekTile, { backgroundColor: t.bg }]}>
-                  <View style={[styles.weekCheck, w.done === 'half' && styles.weekHalf]}>
-                    {w.done === 'full' ? <Icon name="check" size={11} strokeWidth={2.8} color={colors.white} /> : <View style={styles.halfFill} />}
+                <View key={s.id} style={[styles.weekTile, { backgroundColor: t.bg }]}>
+                  <View style={[styles.weekCheck, !isDone && styles.weekOpen]}>
+                    {isDone ? <Icon name="check" size={11} strokeWidth={2.8} color={colors.white} /> : null}
                   </View>
-                  <Txt variant="h2" size={w.big.length > 1 ? 17 : 26} color={t.strong}>
-                    {w.big}
+                  <Txt variant="h2" size={26} color={t.strong}>
+                    {s.letter}
                   </Txt>
                   <Txt variant="small" color={t.soft}>
-                    {w.small}
+                    {s.name}
                   </Txt>
                 </View>
               );
@@ -99,8 +125,9 @@ export default function CheckIn() {
               vs last week
             </Txt>
           </View>
-          {(Object.keys(lastWeek) as Feeling[]).map((f) => {
+          {feelings.map((f) => {
             const v = ratings[f];
+            const before = saved.before?.[column[f]] ?? null;
             return v == null ? (
               <View key={f} style={styles.rateCard}>
                 <DotRating label={f} value={null} onChange={(n) => setRatings((r) => ({ ...r, [f]: n }))} />
@@ -109,9 +136,9 @@ export default function CheckIn() {
               <Gauge
                 key={f}
                 label={f}
-                detail={`Last week: ${lastWeek[f]}`}
+                detail={before != null ? `Last week: ${before}` : 'First check-in'}
                 percent={v * 10}
-                baseline={lastWeek[f] * 10}
+                baseline={before != null ? before * 10 : undefined}
                 tone={feelingMeta[f].tone}
                 icon={feelingMeta[f].icon}
                 value={`${v}/10`}
@@ -136,7 +163,7 @@ export default function CheckIn() {
                     {p.label}
                   </Txt>
                   <TextInput
-                    value={lines[p.key] ?? ''}
+                    value={lines[p.key]}
                     onChangeText={(text) => setLines((l) => ({ ...l, [p.key]: text }))}
                     placeholder={p.placeholder}
                     placeholderTextColor={colors.grey}
@@ -154,12 +181,11 @@ export default function CheckIn() {
             <Icon name="check" size={16} strokeWidth={2} />
           </View>
           <Txt variant="meta" style={{ flex: 1 }}>
-            The 10-minute version counts. <Txt variant="meta" weight={600}>{"You haven't missed twice in a row."}</Txt>
+            The 10-minute version counts. <Txt variant="meta" weight={600}>{`${plan.sessionsKept} ${plan.sessionsKept === 1 ? "session" : "sessions"} kept this season.`}</Txt>
           </Txt>
         </View>
 
-        {/* TODO(milestone 5): store the check-in locally and feed the block review. */}
-        <CTA label="Save my week" onPress={() => router.back()} />
+        <CTA label="Save my week" onPress={save} />
       </Gutter>
     </Screen>
   );
@@ -170,8 +196,7 @@ const styles = StyleSheet.create({
   week: { flexDirection: 'row', gap: 8 },
   weekTile: { flex: 1, borderRadius: 20, paddingTop: 14, paddingHorizontal: 12, paddingBottom: 12, gap: 14 },
   weekCheck: { position: 'absolute', top: 8, right: 8, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.ink, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  weekHalf: { backgroundColor: 'rgba(255,255,255,0.8)', alignItems: 'flex-start' },
-  halfFill: { width: 10, height: 20, backgroundColor: colors.ink },
+  weekOpen: { backgroundColor: 'rgba(255,255,255,0.8)' },
   rateCard: { borderRadius: 20, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 6 },
   prompt: { borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 14 },
   promptInput: { fontFamily: fontFamilyFor(700), fontSize: 17, letterSpacing: -0.34, padding: 0 },

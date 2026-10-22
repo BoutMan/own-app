@@ -28,7 +28,7 @@ import { suggestNext, type Suggestion } from '@/domain/engine/plusOne';
 import { getSession, progressionRules, sessionsForWeek } from '@/domain/programme';
 import { formatLoad, stepLoadKg } from '@/domain/units';
 import { useSeason, useUnits } from '@/features/season/currentWeek';
-import { applyVariant, isVariant, toPlayable, type LogPart, type PlayableStep } from '@/features/session/playable';
+import { applyVariant, capSets, isVariant, toPlayable, type LogPart, type PlayableStep } from '@/features/session/playable';
 import { RestRing } from '@/features/session/RestRing';
 import { formatClock, logSet, restLeft, skipRest, startRunner } from '@/features/session/runner';
 import { useWorkoutRecorder } from '@/features/session/useWorkoutRecorder';
@@ -49,7 +49,8 @@ export default function GuidedSession() {
 
   const { session, adjustments, homeOnly, banner } = useMemo(() => {
     const base = getSession(params.id ?? '') ?? sessionsForWeek(week)[0]!;
-    const v = applyVariant(toPlayable(base, week), variant);
+    const early = season.adjustments.some((a) => a.reason === 'earlyDeload');
+    const v = applyVariant(early ? capSets(toPlayable(base, week), 2) : toPlayable(base, week), variant);
     return { ...v, adjustments: [...season.adjustments, ...v.adjustments] };
     // The plan is frozen for the whole session (season adjustments read once): logging sets must not reshuffle it.
   }, [params.id, week, variant]);

@@ -3,10 +3,9 @@ import { useCallback, useRef } from 'react';
 import { useDb } from '@/db/DbProvider';
 import { activeSeason, finishWorkout, logSet, setRpe, startSeason, startWorkout, type LoggedSet } from '@/db/repositories';
 import { mondayOf } from '@/domain/engine/season';
+import { isoDate } from '@/lib/dates';
 
 type Start = { sessionId: string; week: number; mode: 'home' | 'gym'; variant: string; loadFactor: number };
-
-const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 /**
  * Records a guided session on the device. The workout row is created on the first logged set, so
