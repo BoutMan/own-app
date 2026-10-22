@@ -4,8 +4,19 @@ import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import {
   activeSeason,
+  activeSeason as activeSeasonOf,
   eraseAll,
+  eraseCycle,
   exerciseHistory,
+  getProfile,
+  logPeriodStart,
+  periodStarts,
+  ritualsOn,
+  saveOnboarding,
+  seasonGoals,
+  seasonMarkers,
+  setRitual,
+  updateProfile,
   exportAll,
   finishWorkout,
   lastSetsForExercise,
@@ -115,5 +126,66 @@ describe('on-device database', () => {
     eraseAll(db);
     const data = exportAll(db);
     expect([data.seasons, data.workouts, data.sets, data.markers].every((t) => t.length === 0)).toBe(true);
+  });
+
+  it('saves the whole onboarding in one go', () => {
+    const db = testDb();
+    const season = saveOnboarding(db, {
+      firstName: 'Mia',
+      feelings: ['Strong', 'Rested'],
+      goals: [
+        { slot: 'performance', text: '10 push-ups from my knees', baseline: '3' },
+        { slot: 'sensation', text: '', baseline: null },
+        { slot: 'free', text: 'My black jeans fit again', baseline: null },
+      ],
+      health: { pregnancyOrPostpartum: false, medicalCondition: false, injuryOrSurgery: false, noTrainingTwoYears: true, pelvicLeaking: true, pelvicHeaviness: false, pelvicUrgency: false },
+      place: 'home',
+      equipment: ['band', 'backpack'],
+      markers: { energy: 4, sleep: 5 },
+      weekPlan: ['rest', 'session', 'rest', 'session', 'rest', 'session', 'walk'],
+      addToCalendar: true,
+      remindNightBefore: false,
+      startDate: '2026-10-26',
+      signedAt: '2026-10-22T10:00:00Z',
+    });
+    expect(season).toBe(1);
+    expect(getProfile(db)).toMatchObject({ firstName: 'Mia', groundedVersions: true, weekPlan: ['rest', 'session', 'rest', 'session', 'rest', 'session', 'walk'] });
+    expect(seasonGoals(db, 1).map((g) => g.slot)).toEqual(['performance', 'free']);
+    expect(seasonMarkers(db, 1)).toHaveLength(2);
+    expect(activeSeasonOf(db)?.startDate).toBe('2026-10-26');
+    updateProfile(db, { units: 'metric' });
+    expect(getProfile(db)?.units).toBe('metric');
+  });
+
+  it('keeps one value per ritual and day', () => {
+    const db = testDb();
+    setRitual(db, '2026-10-22', 'water', 0.5);
+    setRitual(db, '2026-10-22', 'water', 1);
+    setRitual(db, '2026-10-22', 'protein', 2);
+    expect(ritualsOn(db, '2026-10-22')).toEqual({ water: 1, protein: 2 });
+    expect(ritualsOn(db, '2026-10-23')).toEqual({});
+  });
+
+  it('logs periods once per day and erases the cycle with tracking off', () => {
+    const db = testDb();
+    updateProfile(db, { cycleTracking: true });
+    logPeriodStart(db, '2026-10-14');
+    logPeriodStart(db, '2026-10-14');
+    logPeriodStart(db, '2026-09-16');
+    expect(periodStarts(db)).toEqual(['2026-09-16', '2026-10-14']);
+    eraseCycle(db);
+    expect(periodStarts(db)).toEqual([]);
+    expect(getProfile(db)?.cycleTracking).toBe(false);
+  });
+
+  it('never mixes circuit rounds with strength sets in the history', () => {
+    const db = testDb();
+    const season = startSeason(db, '2026-10-26');
+    const c = startWorkout(db, { sessionId: 'b1-c', season, week: 1, mode: 'home' }, '2026-10-30T18:00:00Z');
+    logSet(db, c, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 22 }, '2026-10-30T18:05:00Z');
+    const a = startWorkout(db, { sessionId: 'b1-a', season, week: 1, mode: 'home' }, '2026-10-26T18:00:00Z');
+    logSet(db, a, { stepKey: '1', exerciseId: 'goblet-squat', setIndex: 0, reps: 10, loadKg: 8 }, '2026-10-26T18:05:00Z');
+    expect(exerciseHistory(db, 'goblet-squat')[0]!.sets[0]!.reps).toBe(10);
+    expect(exerciseHistory(db, 'goblet-squat', 4, undefined, 'circuit')[0]!.sets[0]!.reps).toBe(22);
   });
 });

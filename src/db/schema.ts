@@ -31,6 +31,10 @@ export const profile = sqliteTable('profile', {
   trackBodyWeight: integer('track_body_weight', { mode: 'boolean' }).notNull().default(false),
   remindNightBefore: integer('remind_night_before', { mode: 'boolean' }).notNull().default(true),
   addToCalendar: integer('add_to_calendar', { mode: 'boolean' }).notNull().default(true),
+  /** Hormonal contraception: no phases shown, the app follows the day's energy (spec). */
+  hormonalContraception: integer('hormonal_contraception', { mode: 'boolean' }).notNull().default(false),
+  /** Monday (ISO date) of a deload week taken early, after a stall or two signs of overtraining. */
+  earlyDeloadWeekOf: text('early_deload_week_of'),
   contractSignedAt: text('contract_signed_at'),
   onboardedAt: text('onboarded_at'),
   createdAt: timestamp('created_at'),
@@ -188,4 +192,25 @@ export const vaultPhotos = sqliteTable('vault_photos', {
   /** file:// URI inside the app sandbox. */
   fileUri: text('file_uri').notNull(),
   takenAt: timestamp('taken_at'),
+});
+
+/** Daily rituals on Today: water (litres), protein (palms), morning flow and evening wind-down (minutes). */
+export const dailyRituals = sqliteTable(
+  'daily_rituals',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    /** Local date, "2026-10-27". */
+    date: text('date').notNull(),
+    kind: text('kind', { enum: ['water', 'protein', 'morning', 'evening'] }).notNull(),
+    value: real('value').notNull(),
+    updatedAt: timestamp('updated_at'),
+  },
+  (t) => [uniqueIndex('daily_rituals_unique').on(t.date, t.kind)],
+);
+
+/** First day of each period, logged in one tap (spec "Le cycle comme boussole"). Sensitive: device only. */
+export const cyclePeriods = sqliteTable('cycle_periods', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  startDate: text('start_date').notNull().unique(),
+  createdAt: timestamp('created_at'),
 });

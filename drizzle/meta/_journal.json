@@ -15,6 +15,13 @@
       "when": 1792596158868,
       "tag": "0001_workout_load_factor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792678305750,
+      "tag": "0002_rituals_cycle_early_deload",
+      "breakpoints": true
     }
   ]
 }
