@@ -27,6 +27,8 @@ import { previewToolsEnabled, setPreviewWeek, usePreviewWeek } from '@/features/
 import { useSeason } from '@/features/season/currentWeek';
 import type { DayPlan } from '@/features/onboarding/schedule';
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
+import { askForCalendar, syncCalendar } from '@/features/calendar/device';
+import { planCalendar } from '@/features/calendar/plan';
 import { askForNotifications, notificationsAllowed } from '@/features/reminders/notifications';
 import { planSummary } from '@/features/subscription/model';
 import { resetPreviewSubscription } from '@/features/subscription/store';
@@ -50,6 +52,7 @@ export default function Settings() {
   const update = useUpdateProfile();
   const sub = useSubscription();
   const plan = planSummary(sub.state, sub.plans);
+  const seasonStart = useSeason().startDate;
   const [name, setName] = useState<string | null>(null);
   const days = profile.weekPlan.flatMap((d, i) => (d === 'session' ? [i] : []));
   const equipment = profile.equipment.filter((e) => e in EQUIPMENT_LABELS);
@@ -185,6 +188,28 @@ export default function Settings() {
         <ListRow icon="halfCircle" tone="mauve" label="Cycle tracking" detail="A phase tip on your days" right={<Switch value={profile.cycleTracking} onChange={(v) => update({ cycleTracking: v })} accessibilityLabel="Cycle tracking" />} />
         <ListRow icon="home" tone="vanilla" label="Grounded versions" detail="No jumps, joint-friendly" right={<Switch value={profile.groundedVersions} onChange={(v) => update({ groundedVersions: v })} accessibilityLabel="Grounded versions" />} />
         <ListRow icon="heart" tone="fog" label="Redo my health check" chevron onPress={() => router.push('/health-check')} />
+      </ListGroup>
+
+      <SectionLabel>Calendar</SectionLabel>
+      <ListGroup>
+        <ListRow
+          tileOnWhite
+          icon="calendar"
+          tone="vanilla"
+          label="Add my sessions to Calendar"
+          detail={Platform.OS === 'web' ? 'On the phone only' : 'In a separate "Own" calendar'}
+          right={
+            <Switch
+              value={profile.addToCalendar}
+              onChange={(v) => {
+                update({ addToCalendar: v });
+                // The sync runs before the permission answer: write the sessions once it is granted.
+                if (v) void askForCalendar().then((ok) => (ok ? syncCalendar(planCalendar(profile.weekPlan, profile.sessionTime, seasonStart)) : undefined));
+              }}
+              accessibilityLabel="Add my sessions to Calendar"
+            />
+          }
+        />
       </ListGroup>
 
       <SectionLabel>Reminders</SectionLabel>

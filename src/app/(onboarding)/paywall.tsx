@@ -6,6 +6,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Heading, Icon, Txt } from '@/components';
 import { photos } from '@/content/photos';
+import { askForCalendar, syncCalendar } from '@/features/calendar/device';
+import { planCalendar } from '@/features/calendar/plan';
+import { useProfile } from '@/features/profile/useProfile';
+import { useSeason } from '@/features/season/currentWeek';
 import type { PlanId } from '@/features/subscription/model';
 import { useSubscription } from '@/features/subscription/SubscriptionProvider';
 import { colors, radius, space, tones } from '@/theme';
@@ -24,7 +28,15 @@ export default function Paywall() {
   const [plan, setPlan] = useState<PlanId>('yearly');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const enter = () => router.replace('/(tabs)');
+  const { addToCalendar, weekPlan, sessionTime } = useProfile();
+  const { startDate } = useSeason();
+  const enter = () => {
+    // "Add to my calendar" was chosen in onboarding 6/7: ask once she is in, then write the sessions.
+    if (addToCalendar) {
+      void askForCalendar().then((ok) => (ok ? syncCalendar(planCalendar(weekPlan, sessionTime, startDate)) : undefined));
+    }
+    router.replace('/(tabs)');
+  };
   const close = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
   const yearly = sub.plans.yearly;
   const monthly = sub.plans.monthly;

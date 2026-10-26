@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DbProvider } from '@/db/DbProvider';
+import { CalendarSync } from '@/features/calendar/useCalendarSync';
 import { ReminderSync } from '@/features/reminders/useReminderSync';
 import { SubscriptionProvider } from '@/features/subscription/SubscriptionProvider';
 import { VaultLockProvider } from '@/features/vault/VaultLock';
@@ -41,6 +42,7 @@ export default function RootLayout() {
           <SubscriptionProvider>
             <VaultLockProvider>
               <ReminderSync />
+              <CalendarSync />
               <StatusBar style="auto" />
               <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
                 <Stack.Screen name="index" options={{ animation: 'fade' }} />
