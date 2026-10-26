@@ -4,17 +4,26 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Gauge, Gutter, Heading, Icon, Logo, PhotoHeader, PhotoTile, Pill, Screen, StatTiles, Txt } from '@/components';
-import { blockForWeek } from '@/domain/programme';
+import { Gauge, Gutter, Heading, Icon, Logo, PhotoHeader, Pill, Screen, StatTiles, Txt } from '@/components';
+import { blockForWeek, checkpoints } from '@/domain/programme';
 import { useUnits } from '@/features/season/currentWeek';
 import { useGlowCard, useMarkers } from '@/features/season/glow';
 import { useSeasonSummary } from '@/features/season/today';
 import { photos } from '@/content/photos';
+import { CHECKPOINT_LABEL, CHECKPOINT_WEEK } from '@/features/vault/poses';
+import { useVault } from '@/features/vault/useVault';
+import { useVaultLock } from '@/features/vault/VaultLock';
+import { addDays, formatShort } from '@/lib/dates';
 import { colors, radius, tones } from '@/theme';
 
 /** 15 · Progress — glow card, counters, the seven markers against day 0, photo vault. */
 export default function Progress() {
   const s = useSeasonSummary();
+  const vaultLock = useVaultLock();
+  const vault = useVault(s.plan.season);
+  const dayZero = vault.at('day0', 'front');
+  const nextCheckpoint = checkpoints.find((c) => c !== 'day0' && !vault.at(c, 'front'));
+  const nextPhoto = nextCheckpoint ? { checkpoint: nextCheckpoint, date: addDays(s.plan.startDate, (CHECKPOINT_WEEK[nextCheckpoint] - 1) * 7 + 6) } : null;
   const units = useUnits();
   const markers = useMarkers(s.plan.season);
   const w = useGlowCard(s.plan, markers, units);
@@ -140,19 +149,34 @@ export default function Progress() {
               Private · only you
             </Txt>
           </View>
-          {/* TODO(milestone 5): real on-device vault behind Face ID. Photos never leave the phone. */}
-          <View style={styles.vault}>
-            <PhotoTile source={photos.kettlebellPink} label="Day 0" height={210} style={{ flex: 1 }} />
+          {/* Own photos only once the vault is unlocked (Face ID); otherwise a lock, never a blurred body. */}
+          <Pressable style={styles.vault} onPress={() => router.push('/vault')} accessibilityRole="button" accessibilityLabel="Open the photo vault">
+            {vaultLock.open && dayZero ? (
+              <View style={[styles.locked, { flex: 1 }]}>
+                <Image source={{ uri: dayZero.fileUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <View style={styles.tilePill}>
+                  <Pill label="Day 0" />
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.locked, { flex: 1 }]}>
+                <View style={styles.lockedCenter}>
+                  <View style={styles.lockCircle}>
+                    <Icon name={dayZero ? 'lock' : 'plankMark'} size={18} strokeWidth={1.8} />
+                  </View>
+                  <Pill label={dayZero ? 'Day 0 · locked' : 'Day 0 · take them'} />
+                </View>
+              </View>
+            )}
             <View style={[styles.locked, { flex: 1 }]}>
-              <Image source={photos.kettlebellPink} style={StyleSheet.absoluteFill} blurRadius={24} />
               <View style={styles.lockedCenter}>
                 <View style={styles.lockCircle}>
                   <Icon name="lock" size={18} strokeWidth={1.8} />
                 </View>
-                <Pill label="Day 30 · Nov 4" />
+                <Pill label={nextPhoto ? `${CHECKPOINT_LABEL[nextPhoto.checkpoint]} · ${formatShort(nextPhoto.date)}` : 'Season complete'} />
               </View>
             </View>
-          </View>
+          </Pressable>
         </View>
       </Gutter>
     </Screen>
@@ -178,5 +202,6 @@ const styles = StyleSheet.create({
   vault: { flexDirection: 'row', gap: 8 },
   locked: { height: 210, borderRadius: 22, overflow: 'hidden', backgroundColor: '#F1EFEB' },
   lockedCenter: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  tilePill: { position: 'absolute', left: 12, bottom: 12 },
   lockCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
 });

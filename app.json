@@ -31,7 +31,27 @@
         }
       ],
       "expo-sqlite",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Own uses the camera for your progress photos. They stay in the app's locked vault on this phone and are never uploaded.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Own uses Face ID to lock your photo vault."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Own adds your session times to your calendar, only if you ask it to."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -16,6 +16,8 @@ import { useProfile } from '@/features/profile/useProfile';
 import { useBlockReview } from '@/features/review/blockReview';
 import { formatDelta, formatTestValue } from '@/features/review/tests';
 import { useSeason } from '@/features/season/currentWeek';
+import { useVault } from '@/features/vault/useVault';
+import { useVaultLock } from '@/features/vault/VaultLock';
 import { colors, fontFamilyFor, photoHeader, radius, tones, type Tone } from '@/theme';
 
 const testStyle: Record<TestId, { label: string; tone: Tone; icon: IconName }> = {
@@ -64,26 +66,45 @@ export default function BlockReview() {
       : { value: '–', label: 'markers to rate', tone: 'fog' },
   ];
   const testsTaken = Object.keys(r.tests.now).length > 0;
+  const lock = useVaultLock();
+  const vault = useVault(season.season);
+  const before = vault.at('day0', 'front');
+  const after = vault.at(r.checkpoint, 'front');
+  const hasPhotos = before !== null && after !== null;
+  const pair = hasPhotos && lock.open ? ([before.fileUri, after.fileUri] as const) : null;
 
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
       <View style={styles.hero}>
-        {/* TODO(milestone 5): the user's own day-0 and checkpoint photos from the vault, behind Face ID. */}
-        <View style={styles.pair}>
-          <Image source={photos.kettlebellPink} style={styles.half} contentFit="cover" />
-          <Image source={photos.kettlebellPink2} style={styles.half} contentFit="cover" />
-        </View>
+        {/* Her own front photos, day 0 and this checkpoint, once the vault is unlocked; an ambience photo otherwise. */}
+        {pair ? (
+          <View style={styles.pair}>
+            <Image source={{ uri: pair[0] }} style={styles.half} contentFit="cover" />
+            <Image source={{ uri: pair[1] }} style={styles.half} contentFit="cover" />
+          </View>
+        ) : (
+          <Image source={photos.kettlebellPink} style={StyleSheet.absoluteFill} contentFit="cover" />
+        )}
         <LinearGradient colors={photoHeader.gradient} locations={photoHeader.gradientStops} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <View pointerEvents="none" style={styles.frame} />
         <View style={[styles.top, { top: Math.max(insets.top, 20) + 8 }]}>
           <CircleButton icon="chevronLeft" surface="white" accessibilityLabel="Back" onPress={() => router.back()} />
           <Pill label={DAY[n]} dot size="sm" />
         </View>
-        <View style={styles.labels}>
-          <Pill label="Day 0" />
-          <Pill label={DAY[n]} active />
-        </View>
+        {pair ? (
+          <View style={styles.labels}>
+            <Pill label="Day 0" />
+            <Pill label={DAY[n]} active />
+          </View>
+        ) : (
+          <View style={styles.labels}>
+            <Pill
+              label={hasPhotos ? 'Unlock to compare' : 'Add your photos'}
+              onPress={() => (hasPhotos ? void lock.unlock() : router.push('/vault'))}
+            />
+          </View>
+        )}
         <View style={styles.bottom}>
           <Heading variant="hero" size={52} on="photo" accent="done." style={{ letterSpacing: -3.12, lineHeight: 48 }}>
             {`Block ${WORD[n]},\ndone.`}

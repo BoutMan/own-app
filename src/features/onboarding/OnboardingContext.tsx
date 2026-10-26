@@ -39,6 +39,8 @@ export type OnboardingAnswers = {
   nightBeforeReminder: boolean;
   startDate: Date;
   signed: boolean;
+  /** Day-0 vault photos already moved into the app's private folder, by pose. */
+  photos: Partial<Record<'front' | 'side' | 'back', string>>;
 };
 
 const emptyGoal: Goal = { text: '', today: '' };
@@ -59,6 +61,7 @@ function initialAnswers(): OnboardingAnswers {
     nightBeforeReminder: true,
     startDate: nextMonday(new Date()),
     signed: false,
+    photos: {},
   };
 }
 

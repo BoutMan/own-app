@@ -255,6 +255,8 @@ export type OnboardingRecord = {
   sessionTime?: string;
   addToCalendar: boolean;
   remindNightBefore: boolean;
+  /** Day-0 vault photos taken during onboarding (files already in the app sandbox). */
+  photos?: { pose: Pose; fileUri: string }[];
   /** Monday the season starts, "2026-10-26". */
   startDate: string;
   signedAt: string;
@@ -303,6 +305,9 @@ export function saveOnboarding(db: Db, r: OnboardingRecord): number {
     }
     for (const [marker, value] of Object.entries(r.markers) as [MarkerId, number][]) {
       tx.insert(markerEntries).values({ season, checkpoint: 'day0', marker, value }).run();
+    }
+    for (const p of r.photos ?? []) {
+      tx.insert(vaultPhotos).values({ season, checkpoint: 'day0', pose: p.pose, fileUri: p.fileUri }).run();
     }
     return season;
   });
@@ -463,6 +468,36 @@ export function badgeStats(db: Db): BadgeStats {
     reviews: reviews.length,
     seasonDone: reviews.some((r) => r.checkpoint === 'day90') || tests.some((t) => t.checkpoint === 'day90'),
   };
+}
+
+// ─── Photo vault (files stay in the app sandbox, src/features/vault) ─────
+
+export type Pose = 'front' | 'side' | 'back';
+
+export function seasonPhotos(db: Db, season: number) {
+  return db.select().from(vaultPhotos).where(eq(vaultPhotos.season, season)).orderBy(vaultPhotos.takenAt).all();
+}
+
+/** Stores a photo for a checkpoint and pose; returns the file it replaces, for the caller to delete. */
+export function savePhoto(db: Db, season: number, checkpoint: Checkpoint, pose: Pose, fileUri: string): string | null {
+  return db.transaction((tx) => {
+    const old = tx
+      .select()
+      .from(vaultPhotos)
+      .where(and(eq(vaultPhotos.season, season), eq(vaultPhotos.checkpoint, checkpoint), eq(vaultPhotos.pose, pose)))
+      .get();
+    if (old) tx.delete(vaultPhotos).where(eq(vaultPhotos.id, old.id)).run();
+    tx.insert(vaultPhotos).values({ season, checkpoint, pose, fileUri }).run();
+    return old && old.fileUri !== fileUri ? old.fileUri : null;
+  });
+}
+
+/** Removes a photo row; returns its file for the caller to delete. */
+export function removePhoto(db: Db, id: number): string | null {
+  const row = db.select().from(vaultPhotos).where(eq(vaultPhotos.id, id)).get();
+  if (!row) return null;
+  db.delete(vaultPhotos).where(eq(vaultPhotos.id, id)).run();
+  return row.fileUri;
 }
 
 // ─── Data & privacy (screen 28) ────────────────────────────────────────────

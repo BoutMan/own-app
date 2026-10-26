@@ -28,6 +28,9 @@ import {
   startWorkout,
   DEFAULT_WEEK_PLAN,
   loadProgress,
+  savePhoto,
+  removePhoto,
+  seasonPhotos,
   testsAt,
   recordTest,
   saveBlockReview,
@@ -214,6 +217,17 @@ describe('on-device database', () => {
     expect(feelingsOn(db, '2026-10-22')).toEqual(['cramps', 'bloated']);
     setFeelings(db, '2026-10-22', []);
     expect(feelingsOn(db, '2026-10-22')).toEqual([]);
+  });
+
+  it('keeps one vault photo per checkpoint and pose, handing back replaced files', () => {
+    const db = testDb();
+    startSeason(db, '2026-10-05');
+    expect(savePhoto(db, 1, 'day0', 'front', 'file:///vault/a.jpg')).toBeNull();
+    expect(savePhoto(db, 1, 'day0', 'front', 'file:///vault/b.jpg')).toBe('file:///vault/a.jpg');
+    savePhoto(db, 1, 'day0', 'side', 'file:///vault/c.jpg');
+    expect(seasonPhotos(db, 1).map((p) => p.fileUri)).toEqual(['file:///vault/b.jpg', 'file:///vault/c.jpg']);
+    expect(removePhoto(db, seasonPhotos(db, 1)[0]!.id)).toBe('file:///vault/b.jpg');
+    expect(seasonPhotos(db, 1)).toHaveLength(1);
   });
 
   it('keeps one value per ritual and day', () => {

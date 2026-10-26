@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Txt } from '@/components';
+import { Button, Icon, Txt } from '@/components';
 import { MARKERS, useOnboarding } from '@/features/onboarding/OnboardingContext';
 import { DotRating, StepScreen } from '@/features/onboarding/ui';
 import { colors, radius } from '@/theme';
@@ -26,8 +26,10 @@ export default function StartingPoint() {
 
       <View style={styles.photos}>
         <View style={styles.slots}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={styles.slot} />
+          {(['front', 'side', 'back'] as const).map((pose) => (
+            <View key={pose} style={[styles.slot, answers.photos[pose] ? styles.slotDone : null]}>
+              {answers.photos[pose] ? <Icon name="check" size={14} strokeWidth={2.4} color={colors.white} /> : null}
+            </View>
           ))}
         </View>
         <View style={{ flex: 1, gap: 2 }}>
@@ -35,11 +37,10 @@ export default function StartingPoint() {
             Day 0 photos
           </Txt>
           <Txt variant="small" color={colors.grey}>
-            Front, side, back. Locked until day 30.
+            Front, side, back. In a locked vault, on this phone only.
           </Txt>
         </View>
-        {/* TODO(milestone 5): open the camera and store photos in the on-device vault (Face ID). */}
-        <Button label="Take" variant="outline" style={styles.take} />
+        <Button label={Object.keys(answers.photos).length === 3 ? 'Retake' : 'Take'} variant="outline" style={styles.take} onPress={() => router.push('/photos')} />
       </View>
     </StepScreen>
   );
@@ -50,5 +51,6 @@ const styles = StyleSheet.create({
   photos: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, borderWidth: 1, borderColor: colors.line, paddingVertical: 10, paddingLeft: 10, paddingRight: 14 },
   slots: { flexDirection: 'row', gap: 4 },
   slot: { width: 34, height: 46, borderRadius: 10, backgroundColor: colors.mist, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.radioOff },
+  slotDone: { backgroundColor: colors.ink, borderStyle: 'solid', borderColor: colors.ink, alignItems: 'center', justifyContent: 'center' },
   take: { height: 36, paddingHorizontal: 14, borderRadius: radius.pill },
 });

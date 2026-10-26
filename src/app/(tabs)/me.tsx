@@ -42,7 +42,7 @@ const badgeLook: Record<BadgeId, { tone: Tone; icon: IconName }> = {
   sessions100: { tone: 'fog', icon: 'star' },
 };
 
-type SpaceTile = { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/review/1' | '/my-contract'; lock?: boolean };
+type SpaceTile = { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/vault' | '/my-contract'; lock?: boolean };
 
 const goalStyle: Record<string, { tone: Tone; icon: IconName }> = {
   performance: { tone: 'vanilla', icon: 'dumbbell' },
@@ -76,7 +76,7 @@ export default function Me() {
   const plan = planSummary(sub.state, sub.plans);
   const space: SpaceTile[] = [
     { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
-    { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
+    { label: 'Photo vault', photo: 'kettlebellPink2', href: '/vault', lock: true },
     { label: cycle.position ? `My cycle · day ${cycle.position.day}` : 'My cycle', photo: 'iceSkincare', href: '/cycle' },
     { label: 'My circle', photo: 'streetAbsMatcha', href: '/circle' },
   ];

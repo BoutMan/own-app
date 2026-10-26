@@ -8,6 +8,7 @@ import { CircleButton, Heading, Icon, ListGroup, ListRow, Pill, Screen, Switch, 
 import { photos } from '@/content/photos';
 import { useDb } from '@/db/DbProvider';
 import { eraseAll, eraseCycle } from '@/db/repositories';
+import { deleteAllPhotoFiles } from '@/features/vault/files';
 import { colors, photoHeader, radius, tones, type Tone } from '@/theme';
 
 type Place = { icon: IconName; tone: Tone | null; title: string; text: string; items: string[]; never?: boolean };
@@ -33,10 +34,10 @@ export default function Privacy() {
   const [erased, setErased] = useState(false);
   const [cycleStep, setCycleStep] = useState<'idle' | 'confirm' | 'done'>('idle');
   const { write } = useDb();
-  // TODO(milestone 5): also delete the vault photo files.
   const erase = () => {
     if (!confirmErase) return setConfirmErase(true);
     write((db) => eraseAll(db));
+    void deleteAllPhotoFiles();
     setConfirmErase(false);
     setErased(true);
   };
