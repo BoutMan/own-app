@@ -20,7 +20,8 @@ import {
   type IconName,
 } from '@/components';
 import { useQuery } from '@/db/DbProvider';
-import { activeDays, minutesTrained, seasonGoals } from '@/db/repositories';
+import { activeDays, badgeStats, minutesTrained, seasonGoals } from '@/db/repositories';
+import { badges as computeBadges, badgeShelf, type BadgeId } from '@/domain/badges';
 import { blockForWeek } from '@/domain/programme';
 import { useCycle, useProfile } from '@/features/profile/useProfile';
 import { WhyCard } from '@/features/profile/WhyCard';
@@ -28,15 +29,16 @@ import { useSeasonSummary } from '@/features/season/today';
 import { photos, type PhotoKey } from '@/content/photos';
 import { colors, tones, type Tone } from '@/theme';
 
-type Badge = { label: string; earned: boolean; tone?: Tone; icon?: IconName; count?: string };
-
-// Badges are V1: shown with mock state so the layout is in place.
-const badges: Badge[] = [
-  { label: 'First week', earned: true, tone: 'vanilla', icon: 'star' },
-  { label: 'Never missed twice', earned: true, tone: 'mauve', icon: 'repeat' },
-  { label: '3 to go', earned: false, count: '10' },
-  { label: 'Full season', earned: false, icon: 'lock' },
-];
+const badgeLook: Record<BadgeId, { tone: Tone; icon: IconName }> = {
+  firstWeek: { tone: 'vanilla', icon: 'star' },
+  sessions10: { tone: 'latte', icon: 'dumbbell' },
+  firstDeload: { tone: 'fog', icon: 'leaf' },
+  firstReview: { tone: 'mauve', icon: 'flag' },
+  floorPushUp: { tone: 'vanilla', icon: 'bolt' },
+  sessions30: { tone: 'latte', icon: 'dumbbell' },
+  fullSeason: { tone: 'mauve', icon: 'crown' },
+  sessions100: { tone: 'fog', icon: 'star' },
+};
 
 type SpaceTile = { label: string; photo: PhotoKey; href: '/circle' | '/cycle' | '/review/1' | '/my-contract'; lock?: boolean };
 
@@ -66,6 +68,8 @@ export default function Me() {
     [season, s.plan.startDate],
   );
   const block = blockForWeek(s.week);
+  const allBadges = computeBadges(useQuery((db) => badgeStats(db)));
+  const shelf = badgeShelf(allBadges);
   const space: SpaceTile[] = [
     { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
     { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
@@ -167,33 +171,29 @@ export default function Me() {
               My badges
             </Heading>
             <Txt variant="meta" color={colors.grey}>
-              2 of 12
+              {`${allBadges.filter((b) => b.earned).length} of ${allBadges.length}`}
             </Txt>
           </View>
           <View style={styles.badges}>
-            {badges.map((b) => (
-              <View key={b.label} style={styles.badge}>
-                <View
-                  style={[
-                    styles.badgeCircle,
-                    b.earned && b.tone
-                      ? { backgroundColor: tones[b.tone].bg, borderWidth: 1.5, borderColor: tones[b.tone].ring }
-                      : styles.badgeLocked,
-                  ]}
-                >
-                  {b.count ? (
-                    <Txt variant="h2" size={20} color="#9A948D">
-                      {b.count}
-                    </Txt>
-                  ) : b.icon ? (
-                    <Icon name={b.icon} size={22} strokeWidth={1.7} color={b.earned && b.tone ? tones[b.tone].strong : '#9A948D'} />
-                  ) : null}
+            {shelf.map((b) => {
+              const look = badgeLook[b.id];
+              return (
+                <View key={b.id} style={styles.badge} accessibilityLabel={b.earned ? `${b.label}, earned` : `${b.label}, not yet`}>
+                  <View style={[styles.badgeCircle, b.earned ? { backgroundColor: tones[look.tone].bg, borderWidth: 1.5, borderColor: tones[look.tone].ring } : styles.badgeLocked]}>
+                    {!b.earned && b.toGo !== undefined ? (
+                      <Txt variant="h2" size={20} color="#9A948D">
+                        {String(b.goal)}
+                      </Txt>
+                    ) : (
+                      <Icon name={b.earned ? look.icon : 'lock'} size={22} strokeWidth={1.7} color={b.earned ? tones[look.tone].strong : '#9A948D'} />
+                    )}
+                  </View>
+                  <Txt variant="small" weight={b.earned ? 600 : 400} color={b.earned ? colors.ink : colors.grey} style={{ textAlign: 'center' }}>
+                    {!b.earned && b.toGo !== undefined ? `${b.toGo} to go` : b.label}
+                  </Txt>
                 </View>
-                <Txt variant="small" weight={b.earned ? 600 : 400} color={b.earned ? colors.ink : colors.grey} style={{ textAlign: 'center' }}>
-                  {b.label}
-                </Txt>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </View>
 

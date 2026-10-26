@@ -4,6 +4,7 @@
  */
 import { and, desc, eq, gte, inArray, isNotNull, like, notLike } from 'drizzle-orm';
 
+import type { BadgeStats } from '@/domain/badges';
 import type { PastPerformance } from '@/domain/engine/plusOne';
 import type { Checkpoint, MarkerId, TestId } from '@/domain/programme';
 
@@ -448,6 +449,20 @@ export function testsAt(db: Db, season: number, checkpoint: Checkpoint): Partial
 /** Every test result of every season (badges). */
 export function allTestResults(db: Db) {
   return db.select().from(testResults).all();
+}
+
+/** What the badges are computed from (src/domain/badges.ts), across every season. */
+export function badgeStats(db: Db): BadgeStats {
+  const done = db.select({ week: workouts.week, loadFactor: workouts.loadFactor }).from(workouts).where(isNotNull(workouts.endedAt)).all();
+  const reviews = db.select({ checkpoint: blockReviews.checkpoint }).from(blockReviews).all();
+  const tests = db.select({ test: testResults.test, checkpoint: testResults.checkpoint, value: testResults.value, note: testResults.note }).from(testResults).all();
+  return {
+    sessions: done.length,
+    deloadKept: done.some((w) => (w.week === 4 || w.week === 8) && w.loadFactor < 1),
+    floorPushUp: tests.some((t) => t.test === 'pushUps' && t.note === 'floor' && t.value >= 1),
+    reviews: reviews.length,
+    seasonDone: reviews.some((r) => r.checkpoint === 'day90') || tests.some((t) => t.checkpoint === 'day90'),
+  };
 }
 
 // ─── Data & privacy (screen 28) ────────────────────────────────────────────
