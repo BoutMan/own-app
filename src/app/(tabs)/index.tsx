@@ -22,7 +22,8 @@ import {
 import { activityDot } from '@/content/mock';
 import { photos } from '@/content/photos';
 import { useDb, useQuery } from '@/db/DbProvider';
-import { ritualsOn, setRitual } from '@/db/repositories';
+import { blockReviewFor, ritualsOn, setRitual, testsAt } from '@/db/repositories';
+import { blockForWeek, weekRule } from '@/domain/programme';
 import { mondayOf } from '@/domain/engine/season';
 import { formatLong, isoDate } from '@/lib/dates';
 import type { DayPlan } from '@/features/onboarding/schedule';
@@ -55,6 +56,18 @@ export default function Today() {
   const [day, setDay] = useState(weekDays.find((d) => d.isToday)?.key ?? weekDays[0]!.key);
   const adjustment = plan.adjustments[0];
   const deload = useDeloadOffer(plan);
+  // Day-0 tests (guide p. 14) until taken; the block review from its week on (weeks 4, 8, 12).
+  const todo = useQuery(
+    (db) => {
+      if (plan.season === null) return { day0: true, review: false };
+      const review = weekRule(week).review;
+      return {
+        day0: Object.keys(testsAt(db, plan.season, 'day0')).length === 0,
+        review: review !== undefined && !blockReviewFor(db, plan.season, review),
+      };
+    },
+    [plan.season, week],
+  );
   return (
     <Screen padTop={false}>
       <StatusBar style="light" />
@@ -140,6 +153,16 @@ export default function Today() {
             }
           />
         )}
+
+        {todo.review ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/review/${blockForWeek(week).number}`)}>
+            <ToneCard tone="fog" icon="flag" eyebrow={`End of block ${blockForWeek(week).number}`} title="Your block review" text="Five tests, seven markers, two lines. Then you see how far you came." />
+          </Pressable>
+        ) : todo.day0 && week <= 2 ? (
+          <Pressable accessibilityRole="button" onPress={() => router.push('/tests/day0')}>
+            <ToneCard tone="fog" icon="flag" eyebrow="Day 0" title="Take your five tests" text="Fifteen minutes, once. They are what you will beat on day 30." />
+          </Pressable>
+        ) : null}
 
         <View style={{ gap: 10 }}>
           <View style={styles.sectionHead}>

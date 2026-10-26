@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Gauge, Gutter, Heading, Icon, Logo, PhotoHeader, PhotoTile, Pill, Screen, StatTiles, Txt } from '@/components';
+import { blockForWeek } from '@/domain/programme';
 import { useUnits } from '@/features/season/currentWeek';
 import { useGlowCard, useMarkers } from '@/features/season/glow';
 import { useSeasonSummary } from '@/features/season/today';
@@ -66,7 +67,7 @@ export default function Progress() {
               Your glow
             </Heading>
           </View>
-          <Pressable accessibilityRole="button" onPress={() => router.push('/review/1')} style={styles.reviewBtn}>
+          <Pressable accessibilityRole="button" onPress={() => router.push(`/review/${blockForWeek(s.week).number}`)} style={styles.reviewBtn}>
             <Txt variant="meta" weight={500}>
               Block review
             </Txt>

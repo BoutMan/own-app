@@ -28,6 +28,12 @@ import {
   startWorkout,
   DEFAULT_WEEK_PLAN,
   loadProgress,
+  testsAt,
+  recordTest,
+  saveBlockReview,
+  blockReviewFor,
+  setFeelings,
+  feelingsOn,
   workoutsInWeek,
 } from './repositories';
 import { runMigrations } from './migrate';
@@ -191,6 +197,23 @@ describe('on-device database', () => {
       { exerciseId: 'goblet-squat', fromKg: 9, toKg: 11 },
       { exerciseId: 'romanian-deadlift', fromKg: 12, toKg: 12 },
     ]);
+  });
+
+  it('stores tests, block reviews and daily feelings', () => {
+    const db = testDb();
+    startSeason(db, '2026-10-05');
+    recordTest(db, 1, 'day0', 'pushUps', 3, 'knees');
+    recordTest(db, 1, 'day30', 'pushUps', 7, 'knees');
+    recordTest(db, 1, 'day30', 'pushUps', 8, 'floor');
+    expect(testsAt(db, 1, 'day30')).toEqual({ pushUps: { value: 8, note: 'floor' } });
+    saveBlockReview(db, 1, 'day30', { changedMost: 'Sleep', oneChange: null });
+    saveBlockReview(db, 1, 'day30', { changedMost: 'Sleep', oneChange: 'Clothes out' });
+    expect(blockReviewFor(db, 1, 'day30')).toMatchObject({ changedMost: 'Sleep', oneChange: 'Clothes out' });
+    setFeelings(db, '2026-10-22', ['energy']);
+    setFeelings(db, '2026-10-22', ['cramps', 'bloated']);
+    expect(feelingsOn(db, '2026-10-22')).toEqual(['cramps', 'bloated']);
+    setFeelings(db, '2026-10-22', []);
+    expect(feelingsOn(db, '2026-10-22')).toEqual([]);
   });
 
   it('keeps one value per ritual and day', () => {
