@@ -5,9 +5,9 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, CircleButton, Gutter, Heading, Icon, ListGroup, ListRow, PhotoHeader, Pill, Screen, Stepper, Switch, ToneCard, Txt } from '@/components';
 import { photos } from '@/content/photos';
-import { useDb } from '@/db/DbProvider';
-import { logPeriodStart, updateProfile } from '@/db/repositories';
-import { phaseOf, type CyclePhase } from '@/domain/engine/cycle';
+import { useDb, useQuery } from '@/db/DbProvider';
+import { allFeelings, feelingsOn, logPeriodStart, setFeelings, updateProfile } from '@/db/repositories';
+import { CYCLE_FEELINGS, energyPattern, PATTERN_BUCKETS, phaseAdjustments, phaseOf, type CyclePhase } from '@/domain/engine/cycle';
 import { useCycle, useUpdateProfile } from '@/features/profile/useProfile';
 import { addDays, formatShort, isoDate } from '@/lib/dates';
 import { colors, tones, type Tone } from '@/theme';
@@ -21,10 +21,18 @@ const phaseDays: Record<CyclePhase, (length: number) => string> = {
   luteal: (l) => `days ${l - 12}–${l}`,
 };
 
+const adjustIcons = ['bars', 'star', 'leaf'] as const;
+const adjustTones: Tone[] = ['latte', 'mauve', 'fog'];
+
+const parseDay = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y!, m! - 1, d!);
+};
+
 /**
- * 20 · Cycle. The guide's compass (p. 19): one tap on the first day of a period, a phase tip on
- * the days that follow. Stored on this phone only. Daily feelings and the personal pattern come
- * with the V1 cycle work.
+ * 20 · Cycle. The guide's compass (p. 19): one tap on the first day of a period, a phase tip and
+ * this week's adjustments, how she feels today, and her own energy pattern once two cycles are
+ * logged. Stored on this phone only.
  */
 export default function Cycle() {
   const { write } = useDb();
@@ -33,7 +41,14 @@ export default function Cycle() {
   const [daysAgo, setDaysAgo] = useState(0);
   const pos = cycle.position;
   const advice = cycle.advice;
-  const startedToday = cycle.starts.some((d) => isoDate(d) === isoDate(new Date()));
+  const today = isoDate(new Date());
+  const startedToday = cycle.starts.some((d) => isoDate(d) === today);
+  const feelings = useQuery((db) => feelingsOn(db, today), [today]);
+  const logs = useQuery((db) => allFeelings(db));
+  const pattern = energyPattern(cycle.starts, logs.map((l) => ({ date: parseDay(l.date), feelings: l.feelings })));
+  const currentBucket = pos ? PATTERN_BUCKETS.findIndex((b) => pos.day >= b.from && pos.day <= b.to) : -1;
+  const toggleFeeling = (id: string) =>
+    write((db) => setFeelings(db, today, feelings.includes(id) ? feelings.filter((f) => f !== id) : [...feelings, id]));
 
   const logStart = (ago: number) =>
     write((db) => {
@@ -114,8 +129,29 @@ export default function Cycle() {
               title={pos.phase === 'follicular' ? 'Your window' : advice.label}
               text={advice.advice}
             />
+            <View style={{ gap: 10 }}>
+              <Heading variant="h2" accent="adjust">
+                This week we adjust
+              </Heading>
+              <ListGroup>
+                {phaseAdjustments[pos.phase].map((a, i) => (
+                  <ListRow key={a.title} icon={adjustIcons[i]!} tone={adjustTones[i]!} label={a.title} detail={a.text} />
+                ))}
+              </ListGroup>
+            </View>
           </>
         ) : null}
+
+        <View style={{ gap: 10 }}>
+          <Heading variant="h2" accent="feel">
+            How do you feel today?
+          </Heading>
+          <View style={styles.chips}>
+            {CYCLE_FEELINGS.map((f) => (
+              <Pill key={f.id} label={f.label} surface="mist" active={feelings.includes(f.id)} onPress={() => toggleFeeling(f.id)} />
+            ))}
+          </View>
+        </View>
 
         {cycle.contraception ? null : (
           <View style={{ gap: 10 }}>
@@ -139,6 +175,48 @@ export default function Cycle() {
                 ? `Based on your last ${Math.min(cycle.starts.length - 1, 6)} cycles. A tip, never a rule: the programme stays on its weeks.`
                 : 'Uses 28 days until you have logged two periods. A tip, never a rule: the programme stays on its weeks.'}
             </Txt>
+          </View>
+        )}
+
+        {cycle.contraception ? null : (
+          <View style={styles.card}>
+            <View style={styles.row}>
+              <Txt variant="cardTitle">Your own pattern</Txt>
+              <Txt variant="small" color={colors.grey}>
+                {pattern ? `after ${pattern.cycles} cycles` : 'after 2 cycles'}
+              </Txt>
+            </View>
+            {pattern ? (
+              <>
+                <View style={styles.patternBars}>
+                  {PATTERN_BUCKETS.map((b, i) => {
+                    const v = pattern.buckets[i];
+                    const phase = phaseOf(b.from, pos?.length ?? 28);
+                    return (
+                      <View key={b.label} style={styles.patternCol}>
+                        <View
+                          style={[
+                            styles.patternBar,
+                            { height: v == null ? 6 : 18 + ((v - 1) / 2) * 62, backgroundColor: barColor[phase] },
+                            i === currentBucket && styles.patternNow,
+                          ]}
+                        />
+                        <Txt variant="small" color={colors.grey}>
+                          {b.label}
+                        </Txt>
+                      </View>
+                    );
+                  })}
+                </View>
+                <Txt variant="small" color={colors.grey}>
+                  {`Energy by cycle day, from your own logs.${pos ? ` You are here: day ${pos.day}.` : ''} A lens, not a rule.`}
+                </Txt>
+              </>
+            ) : (
+              <Txt variant="small" color={colors.grey}>
+                Tap how you feel on a few days of each cycle. After two cycles, your own energy pattern appears here.
+              </Txt>
+            )}
           </View>
         )}
 
@@ -174,5 +252,10 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: colors.line },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   earlier: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  patternBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 104 },
+  patternCol: { flex: 1, alignItems: 'center', gap: 6 },
+  patternBar: { width: '100%', borderRadius: 10 },
+  patternNow: { borderWidth: 2, borderColor: colors.ink },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 });

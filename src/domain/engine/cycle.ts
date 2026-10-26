@@ -79,3 +79,85 @@ export const phaseAdvice: Record<CyclePhase, { label: string; pill: string; advi
     advice: 'Effort feels harder at the same load. Keep the rhythm, cut the volume rather than skipping: 10 to 20 % lighter does not count as a failure.',
   },
 };
+
+/** Feelings the user can log on the cycle screen (mockup 20). */
+export const CYCLE_FEELINGS = [
+  { id: 'energy', label: 'Full of energy' },
+  { id: 'cramps', label: 'Cramps' },
+  { id: 'bloated', label: 'Bloated' },
+  { id: 'lowEnergy', label: 'Low energy' },
+  { id: 'poorSleep', label: 'Poor sleep' },
+  { id: 'hungry', label: 'Hungry' },
+] as const;
+export type CycleFeeling = (typeof CYCLE_FEELINGS)[number]['id'];
+
+/** Groups of cycle days on the "Your own pattern" chart: the period, then 4-day steps. */
+export const PATTERN_BUCKETS = [
+  { label: 'Period', from: 1, to: 5 },
+  { label: 'D6', from: 6, to: 9 },
+  { label: 'D10', from: 10, to: 13 },
+  { label: 'D14', from: 14, to: 17 },
+  { label: 'D18', from: 18, to: 21 },
+  { label: 'D22', from: 22, to: 25 },
+  { label: 'D26', from: 26, to: 35 },
+] as const;
+
+/** Energy read from a day's feelings: 3 full of energy, 1 low energy, 2 otherwise (both: 2). */
+function energyOf(feelings: readonly string[]): number {
+  const high = feelings.includes('energy');
+  const low = feelings.includes('lowEnergy');
+  return high === low ? 2 : high ? 3 : 1;
+}
+
+export type EnergyPattern = {
+  /** Complete cycles the pattern rests on. */
+  cycles: number;
+  /** Average energy per bucket (1–3), null where nothing was logged. */
+  buckets: (number | null)[];
+};
+
+/**
+ * The user's own energy by cycle day, from her daily logs (a lens, not a rule). Shown once two
+ * full cycles are logged; days more than 35 days after a period start are left out.
+ */
+export function energyPattern(periodStarts: readonly Date[], logs: readonly { date: Date; feelings: readonly string[] }[]): EnergyPattern | null {
+  const starts = [...periodStarts].sort((a, b) => a.getTime() - b.getTime());
+  const cycles = starts.length - 1;
+  if (cycles < 2) return null;
+  const sums = PATTERN_BUCKETS.map(() => ({ total: 0, n: 0 }));
+  for (const log of logs) {
+    const start = [...starts].reverse().find((s) => daysBetween(s, log.date) >= 0);
+    if (!start) continue;
+    const day = daysBetween(start, log.date) + 1;
+    const i = PATTERN_BUCKETS.findIndex((b) => day >= b.from && day <= b.to);
+    if (i < 0) continue;
+    sums[i]!.total += energyOf(log.feelings);
+    sums[i]!.n++;
+  }
+  if (sums.every((s) => s.n === 0)) return null;
+  return { cycles, buckets: sums.map((s) => (s.n ? s.total / s.n : null)) };
+}
+
+/** "This week we adjust" on the cycle screen: the guide's advice per phase (p. 19), as three lines. */
+export const phaseAdjustments: Record<CyclePhase, readonly { title: string; text: string }[]> = {
+  period: [
+    { title: 'Lighter if you need it', text: 'Loads −20 %, core swapped for a walk. Or rest: it counts.' },
+    { title: 'Walking and mobility', text: 'They help more than they cost this week' },
+    { title: 'Protein steady', text: '4 palms a day, no change' },
+  ],
+  follicular: [
+    { title: 'Heavier loads', text: 'Take the +1 on load when it feels easy' },
+    { title: 'Your window for the hard things', text: 'New moves and tests sit well here' },
+    { title: 'Protein steady', text: '4 palms a day, no change' },
+  ],
+  ovulation: [
+    { title: 'Technique first', text: 'Mind your knees on squats, lunges and jumps' },
+    { title: 'No improvised personal best', text: 'Enjoy the strength, keep the plan' },
+    { title: 'Protein steady', text: '4 palms a day, no change' },
+  ],
+  luteal: [
+    { title: '−10 to 20 % is fine', text: 'Same effort, lighter load: not a failure' },
+    { title: 'Cut volume, not sessions', text: 'Fewer sets beats skipping the day' },
+    { title: 'Sleep first', text: 'The evening wind-down earns its place this week' },
+  ],
+};
