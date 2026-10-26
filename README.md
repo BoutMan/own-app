@@ -64,9 +64,9 @@ scripts/build-preview  web preview builder
   - [x] Session: 13 Guided session (runs session A from the guide p. 27), 14 Session complete
   - [x] 17 Library (the 35 cards of the guide), 18 Exercise detail, 21 Sunday check-in, 22 Block review, 23 My week is complicated
   - [x] 26 Settings, 27 Subscription, 28 Data & privacy
-  - V1/V2 screens (19 Evening wind-down, 24 Glow card, 29 Circle) are placeholders; 20 Cycle has its first version
+  - V1/V2 screens (19 Evening wind-down, 24 Glow card, 29 Circle) are placeholders; 20 Cycle is built
 - [x] Milestone 2 — data model + programme content from the PDF (see docs/programme-notes.md)
 - [x] Milestone 3 — session engine: logged sets, +1 rule, deloads, missed weeks, plan B (src/domain/engine, tested)
   - supersets and circuits logged per move, early deload on two signs of overtraining or a stall
-- [ ] Milestone 4 — persisted onboarding (done) + paywall (RevenueCat, to do)
-- [ ] Milestone 5 — local reminders, Sunday check-in (stored), block reviews, photo vault
+- [x] Milestone 4 — persisted onboarding + paywall (RevenueCat; keys in .env, see .env.example)
+- [ ] Milestone 5 — local reminders, Sunday check-in, block reviews (done); photo vault (to do)
