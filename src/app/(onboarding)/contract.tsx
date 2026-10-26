@@ -11,6 +11,7 @@ import { useOnboarding } from '@/features/onboarding/OnboardingContext';
 import { SignaturePad } from '@/features/onboarding/SignaturePad';
 import { StepScreen } from '@/features/onboarding/ui';
 import { toOnboardingRecord } from '@/features/onboarding/record';
+import { askForNotifications } from '@/features/reminders/notifications';
 import { colors, fontFamilyFor } from '@/theme';
 
 // The six commitments of the guide's contract, as worded in the mockup.
@@ -29,6 +30,8 @@ export default function Contract() {
   const { write } = useDb();
   const sign = () => {
     write((db) => saveOnboarding(db, toOnboardingRecord(answers, new Date())));
+    // The contract promises reminders: ask for notifications here, in context.
+    void askForNotifications();
     router.push('/ready');
   };
   const range = `${formatShort(answers.startDate)} → ${formatShort(seasonEnd(answers.startDate))}`.toLowerCase();

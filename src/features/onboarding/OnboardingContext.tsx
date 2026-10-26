@@ -33,6 +33,8 @@ export type OnboardingAnswers = {
   /** 1–10, null until rated. */
   markers: Record<Marker, number | null>;
   week: WeekPlan;
+  /** "18:30", local. */
+  sessionTime: string;
   addToCalendar: boolean;
   nightBeforeReminder: boolean;
   startDate: Date;
@@ -52,6 +54,7 @@ function initialAnswers(): OnboardingAnswers {
     equipment: [],
     markers: Object.fromEntries(MARKERS.map((m) => [m, null])) as Record<Marker, number | null>,
     week: defaultWeekPlan,
+    sessionTime: '18:30',
     addToCalendar: true,
     nightBeforeReminder: true,
     startDate: nextMonday(new Date()),

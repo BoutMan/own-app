@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DbProvider } from '@/db/DbProvider';
+import { ReminderSync } from '@/features/reminders/useReminderSync';
 import { PreviewInsets } from '@/lib/PreviewInsets';
 import { colors } from '@/theme';
 
@@ -35,6 +36,7 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <PreviewInsets>
         <DbProvider>
+          <ReminderSync />
           <StatusBar style="auto" />
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
             <Stack.Screen name="index" options={{ animation: 'fade' }} />

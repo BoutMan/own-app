@@ -8,7 +8,9 @@ import type { PastPerformance } from '@/domain/engine/plusOne';
 import type { Checkpoint, MarkerId, TestId } from '@/domain/programme';
 
 import {
+  blockReviews,
   checkIns,
+  cycleFeelings,
   cyclePeriods,
   dailyRituals,
   goals,
@@ -248,6 +250,8 @@ export type OnboardingRecord = {
   equipment: string[];
   markers: Partial<Record<MarkerId, number>>;
   weekPlan: string[];
+  /** "18:30"; the default when left out. */
+  sessionTime?: string;
   addToCalendar: boolean;
   remindNightBefore: boolean;
   /** Monday the season starts, "2026-10-26". */
@@ -269,6 +273,7 @@ export function saveOnboarding(db: Db, r: OnboardingRecord): number {
       place: r.place,
       equipment: r.equipment,
       weekPlan: r.weekPlan,
+      ...(r.sessionTime ? { sessionTime: r.sessionTime } : {}),
       addToCalendar: r.addToCalendar,
       remindNightBefore: r.remindNightBefore,
       // Pelvic floor symptoms switch on the grounded versions (spec, health check).
@@ -344,8 +349,29 @@ export function logPeriodStart(db: Db, date: string): void {
 export function eraseCycle(db: Db): void {
   db.transaction((tx) => {
     tx.delete(cyclePeriods).run();
+    tx.delete(cycleFeelings).run();
     tx.update(profile).set({ cycleTracking: false }).where(eq(profile.id, 1)).run();
   });
+}
+
+/** Feelings logged on a day (cycle screen chips). */
+export function feelingsOn(db: Db, date: string): string[] {
+  return db.select({ f: cycleFeelings.feelings }).from(cycleFeelings).where(eq(cycleFeelings.date, date)).get()?.f ?? [];
+}
+
+export function setFeelings(db: Db, date: string, feelings: string[]): void {
+  if (feelings.length === 0) {
+    db.delete(cycleFeelings).where(eq(cycleFeelings.date, date)).run();
+    return;
+  }
+  db.insert(cycleFeelings)
+    .values({ date, feelings })
+    .onConflictDoUpdate({ target: cycleFeelings.date, set: { feelings, updatedAt: nowIso() } })
+    .run();
+}
+
+export function allFeelings(db: Db): { date: string; feelings: string[] }[] {
+  return db.select({ date: cycleFeelings.date, feelings: cycleFeelings.feelings }).from(cycleFeelings).orderBy(cycleFeelings.date).all();
 }
 
 // ─── Markers, tests, check-ins ────────────────────────────────────────────
@@ -400,6 +426,30 @@ export function saveCheckIn(db: Db, season: number, week: number, c: CheckIn): v
     .run();
 }
 
+export type ReviewCheckpoint = 'day30' | 'day60' | 'day90';
+
+export function blockReviewFor(db: Db, season: number, checkpoint: ReviewCheckpoint) {
+  return db.select().from(blockReviews).where(and(eq(blockReviews.season, season), eq(blockReviews.checkpoint, checkpoint))).get();
+}
+
+export function saveBlockReview(db: Db, season: number, checkpoint: ReviewCheckpoint, words: { changedMost: string | null; oneChange: string | null }): void {
+  db.insert(blockReviews)
+    .values({ season, checkpoint, ...words })
+    .onConflictDoUpdate({ target: [blockReviews.season, blockReviews.checkpoint], set: { ...words, recordedAt: nowIso() } })
+    .run();
+}
+
+/** Test results of a checkpoint, by test. */
+export function testsAt(db: Db, season: number, checkpoint: Checkpoint): Partial<Record<TestId, { value: number; note: string | null }>> {
+  const rows = db.select().from(testResults).where(and(eq(testResults.season, season), eq(testResults.checkpoint, checkpoint))).all();
+  return Object.fromEntries(rows.map((r) => [r.test, { value: r.value, note: r.note }]));
+}
+
+/** Every test result of every season (badges). */
+export function allTestResults(db: Db) {
+  return db.select().from(testResults).all();
+}
+
 // ─── Data & privacy (screen 28) ────────────────────────────────────────────
 
 /** "Export my data": everything, as one plain object the user can save or share herself. */
@@ -418,6 +468,8 @@ export function exportAll(db: Db) {
     measurements: db.select().from(measurements).all(),
     rituals: db.select().from(dailyRituals).all(),
     cycle: db.select().from(cyclePeriods).all(),
+    cycleFeelings: db.select().from(cycleFeelings).all(),
+    blockReviews: db.select().from(blockReviews).all(),
     // Photos are listed, not embedded: the files stay in the vault.
     photos: db.select({ id: vaultPhotos.id, checkpoint: vaultPhotos.checkpoint, pose: vaultPhotos.pose, takenAt: vaultPhotos.takenAt }).from(vaultPhotos).all(),
   };
@@ -426,7 +478,7 @@ export function exportAll(db: Db) {
 /** "Erase all my data": every table emptied. Photo files must be deleted by the caller. */
 export function eraseAll(db: Db): void {
   db.transaction((tx) => {
-    for (const table of [setLogs, workouts, markerEntries, testResults, checkIns, goals, vaultPhotos, measurements, seasons, healthAnswers, dailyRituals, cyclePeriods, profile]) {
+    for (const table of [setLogs, workouts, markerEntries, testResults, checkIns, blockReviews, goals, vaultPhotos, measurements, seasons, healthAnswers, dailyRituals, cyclePeriods, cycleFeelings, profile]) {
       tx.delete(table).run();
     }
   });

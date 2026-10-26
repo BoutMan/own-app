@@ -30,6 +30,10 @@ export const profile = sqliteTable('profile', {
   /** Opt-in only (CLAUDE.md, rule 6). */
   trackBodyWeight: integer('track_body_weight', { mode: 'boolean' }).notNull().default(false),
   remindNightBefore: integer('remind_night_before', { mode: 'boolean' }).notNull().default(true),
+  /** Local reminders (expo-notifications): 30 min before a session, Sunday check-in, evening wind-down. */
+  remindSession: integer('remind_session', { mode: 'boolean' }).notNull().default(true),
+  remindSunday: integer('remind_sunday', { mode: 'boolean' }).notNull().default(true),
+  remindEvening: integer('remind_evening', { mode: 'boolean' }).notNull().default(false),
   addToCalendar: integer('add_to_calendar', { mode: 'boolean' }).notNull().default(true),
   /** Hormonal contraception: no phases shown, the app follows the day's energy (spec). */
   hormonalContraception: integer('hormonal_contraception', { mode: 'boolean' }).notNull().default(false),
@@ -213,4 +217,28 @@ export const cyclePeriods = sqliteTable('cycle_periods', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   startDate: text('start_date').notNull().unique(),
   createdAt: timestamp('created_at'),
+});
+
+/** Block review (day 30, 60, 90): the user's own words. Tests and markers live in their tables. */
+export const blockReviews = sqliteTable(
+  'block_reviews',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    season: integer('season').notNull().references(() => seasons.number, { onDelete: 'cascade' }),
+    checkpoint: text('checkpoint', { enum: ['day30', 'day60', 'day90'] }).notNull(),
+    changedMost: text('changed_most'),
+    oneChange: text('one_change'),
+    recordedAt: timestamp('recorded_at'),
+  },
+  (t) => [uniqueIndex('block_reviews_unique').on(t.season, t.checkpoint)],
+);
+
+/** How the user feels on a given day (cycle screen chips). Sensitive: device only. */
+export const cycleFeelings = sqliteTable('cycle_feelings', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** Local date, "2026-10-27". */
+  date: text('date').notNull().unique(),
+  /** JSON array of feeling ids. */
+  feelings: text('feelings', { mode: 'json' }).$type<string[]>().notNull(),
+  updatedAt: timestamp('updated_at'),
 });

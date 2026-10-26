@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import {
   Button,
@@ -27,15 +27,11 @@ import { previewToolsEnabled, setPreviewWeek, usePreviewWeek } from '@/features/
 import { useSeason } from '@/features/season/currentWeek';
 import type { DayPlan } from '@/features/onboarding/schedule';
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
+import { askForNotifications, notificationsAllowed } from '@/features/reminders/notifications';
+import { formatTime, shiftSessionTime } from '@/lib/time';
 import { colors, fontFamilyFor, radius, tones } from '@/theme';
 
 const EQUIPMENT_LABELS: Record<string, string> = { chair: 'Chair', band: 'Band', dumbbells: 'Dumbbells', kettlebell: 'Kettlebell', backpack: 'Backpack' };
-
-/** "18:30" → "6:30 pm". */
-function formatTime(hhmm: string): string {
-  const [h, m] = hhmm.split(':').map(Number);
-  return `${((h! + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h! < 12 ? 'am' : 'pm'}`;
-}
 
 /** Toggles a strength day; at most three (the programme has three sessions a week). */
 function toggleSessionDay(plan: readonly DayPlan[], i: number): DayPlan[] {
@@ -45,18 +41,22 @@ function toggleSessionDay(plan: readonly DayPlan[], i: number): DayPlan[] {
   return next;
 }
 
-/**
- * 26 · Settings. Training, units and body preferences are stored on the device. Reminder switches
- * stay on this screen until local notifications are scheduled (milestone 5).
- */
+/** 26 · Settings. Everything here is stored on the device; reminders are local notifications. */
 export default function Settings() {
   const profile = useProfile();
   const update = useUpdateProfile();
   const [name, setName] = useState<string | null>(null);
   const days = profile.weekPlan.flatMap((d, i) => (d === 'session' ? [i] : []));
   const equipment = profile.equipment.filter((e) => e in EQUIPMENT_LABELS);
-  const [toggles, setToggles] = useState({ sessionReminder: true, sunday: true, evening: false });
-  const flip = (k: keyof typeof toggles) => (v: boolean) => setToggles((t) => ({ ...t, [k]: v }));
+  const [allowed, setAllowed] = useState(true);
+  useEffect(() => {
+    notificationsAllowed().then(setAllowed, () => {});
+  }, []);
+  // Switching a reminder on asks for notifications the first time.
+  const remind = (key: 'remindSession' | 'remindNightBefore' | 'remindSunday' | 'remindEvening') => (v: boolean) => {
+    update({ [key]: v });
+    if (v) askForNotifications().then(setAllowed, () => {});
+  };
 
   return (
     <Screen gap={14} contentStyle={{ paddingHorizontal: 20 }}>
@@ -146,7 +146,24 @@ export default function Settings() {
             })}
           </View>
         </ListRow>
-        <ListRow icon="calendar" tone="fog" label="Days & time" value={formatTime(profile.sessionTime)}>
+        <ListRow
+          icon="calendar"
+          tone="fog"
+          label="Days & time"
+          right={
+            <View style={styles.timeRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Earlier" hitSlop={6} onPress={() => update({ sessionTime: shiftSessionTime(profile.sessionTime, -15) })} style={styles.timeBtn}>
+                <Txt variant="meta" weight={600}>−</Txt>
+              </Pressable>
+              <Txt variant="meta" color={colors.grey}>
+                {formatTime(profile.sessionTime)}
+              </Txt>
+              <Pressable accessibilityRole="button" accessibilityLabel="Later" hitSlop={6} onPress={() => update({ sessionTime: shiftSessionTime(profile.sessionTime, 15) })} style={styles.timeBtn}>
+                <Txt variant="meta" weight={600}>+</Txt>
+              </Pressable>
+            </View>
+          }
+        >
           <DayCircles selected={days} onToggle={(i) => update({ weekPlan: toggleSessionDay(profile.weekPlan, i) })} />
         </ListRow>
         <ListRow icon="bars" tone="mauve" label="Units" right={
@@ -166,11 +183,20 @@ export default function Settings() {
       </ListGroup>
 
       <SectionLabel>Reminders</SectionLabel>
+      {Platform.OS === 'web' ? (
+        <Txt variant="small" color={colors.grey}>
+          The preview does not send notifications. On the phone, they are scheduled locally.
+        </Txt>
+      ) : !allowed ? (
+        <Txt variant="small" color={colors.grey}>
+          Notifications are off for Own. Turn them on in your iPhone settings to get these reminders.
+        </Txt>
+      ) : null}
       <ListGroup>
-        <ListRow tileOnWhite icon="timer" tone="vanilla" label="Session, 30 min before" right={<Switch value={toggles.sessionReminder} onChange={flip('sessionReminder')} accessibilityLabel="Session reminder" />} />
-        <ListRow tileOnWhite icon="shirt" tone="vanilla" label="Night before: lay out clothes" right={<Switch value={profile.remindNightBefore} onChange={(v) => update({ remindNightBefore: v })} accessibilityLabel="Night-before reminder" />} />
-        <ListRow tileOnWhite icon="check" tone="vanilla" label="Sunday check-in" right={<Switch value={toggles.sunday} onChange={flip('sunday')} accessibilityLabel="Sunday check-in" />} />
-        <ListRow tileOnWhite icon="moon" tone="vanilla" label="Evening wind-down" right={<Switch value={toggles.evening} onChange={flip('evening')} accessibilityLabel="Evening wind-down reminder" />} />
+        <ListRow tileOnWhite icon="timer" tone="vanilla" label="Session, 30 min before" right={<Switch value={profile.remindSession} onChange={remind('remindSession')} accessibilityLabel="Session reminder" />} />
+        <ListRow tileOnWhite icon="shirt" tone="vanilla" label="Night before: lay out clothes" right={<Switch value={profile.remindNightBefore} onChange={remind('remindNightBefore')} accessibilityLabel="Night-before reminder" />} />
+        <ListRow tileOnWhite icon="check" tone="vanilla" label="Sunday check-in" right={<Switch value={profile.remindSunday} onChange={remind('remindSunday')} accessibilityLabel="Sunday check-in" />} />
+        <ListRow tileOnWhite icon="moon" tone="vanilla" label="Evening wind-down" right={<Switch value={profile.remindEvening} onChange={remind('remindEvening')} accessibilityLabel="Evening wind-down reminder" />} />
       </ListGroup>
 
       <SectionLabel>Connected</SectionLabel>
@@ -284,6 +310,8 @@ function PreviewTools() {
 }
 
 const styles = StyleSheet.create({
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  timeBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   nameInput: { fontFamily: fontFamilyFor(600), fontSize: 17, color: colors.ink, padding: 0 },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 12, paddingRight: 14, borderRadius: 24, borderWidth: 1, borderColor: colors.line, marginTop: 4 },

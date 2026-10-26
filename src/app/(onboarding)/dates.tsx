@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Icon, PhotoTile, Switch, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { formatLong } from '@/lib/dates';
+import { formatTime, shiftSessionTime } from '@/lib/time';
 import { useOnboarding } from '@/features/onboarding/OnboardingContext';
 import { countDates, cycleDay, sessionLetters } from '@/features/onboarding/schedule';
 import { StepScreen } from '@/features/onboarding/ui';
@@ -70,11 +71,18 @@ export default function Dates() {
       <View style={styles.group}>
         <View style={[styles.row, styles.divider]}>
           <Txt variant="body">Time</Txt>
-          {/* TODO(milestone 5): native time picker. */}
-          <View style={styles.time}>
-            <Txt variant="body" weight={600}>
-              6:30 – 7:15 pm
-            </Txt>
+          <View style={styles.timeRow}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Earlier" hitSlop={6} onPress={() => update('sessionTime', shiftSessionTime(answers.sessionTime, -15))} style={styles.timeBtn}>
+              <Txt variant="body" weight={600}>−</Txt>
+            </Pressable>
+            <View style={styles.time}>
+              <Txt variant="body" weight={600}>
+                {formatTime(answers.sessionTime)}
+              </Txt>
+            </View>
+            <Pressable accessibilityRole="button" accessibilityLabel="Later" hitSlop={6} onPress={() => update('sessionTime', shiftSessionTime(answers.sessionTime, 15))} style={styles.timeBtn}>
+              <Txt variant="body" weight={600}>+</Txt>
+            </Pressable>
           </View>
         </View>
         <View style={[styles.row, styles.divider]}>
@@ -93,6 +101,8 @@ export default function Dates() {
 }
 
 const styles = StyleSheet.create({
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center' },
   startPill: {
     position: 'absolute', left: 12, bottom: 12, height: 32, paddingHorizontal: 14, borderRadius: radius.pill,
     backgroundColor: colors.white, flexDirection: 'row', alignItems: 'center', gap: 8,

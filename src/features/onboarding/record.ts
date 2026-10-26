@@ -37,6 +37,7 @@ export function toOnboardingRecord(a: OnboardingAnswers, signedAt: Date): Onboar
     equipment: [...a.equipment],
     markers,
     weekPlan: [...a.week],
+    sessionTime: a.sessionTime,
     addToCalendar: a.addToCalendar,
     remindNightBefore: a.nightBeforeReminder,
     startDate: isoDate(a.startDate),

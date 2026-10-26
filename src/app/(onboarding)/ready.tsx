@@ -7,6 +7,7 @@ import { Button, Heading, Icon, Screen, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { blocks as programmeBlocks } from '@/domain/programme';
 import { formatShort, seasonEnd } from '@/lib/dates';
+import { formatTime } from '@/lib/time';
 import { useOnboarding, type Equipment, type OnboardingAnswers } from '@/features/onboarding/OnboardingContext';
 import { NumberTile } from '@/features/onboarding/ui';
 import { colors, space, type Tone } from '@/theme';
@@ -42,7 +43,7 @@ function madeForYou(a: OnboardingAnswers): string[] {
   if (Object.values(a.pelvic).some(Boolean)) lines.push('Grounded versions on, RPE capped at 7');
   const sessions = a.week.flatMap((d, i) => (d === 'session' ? [DAY_NAMES[i]] : []));
   const walk = a.week.findIndex((d) => d === 'walk');
-  if (sessions.length) lines.push(`${sessions.join(' · ')} at 6:30 pm${walk >= 0 ? `, walk on ${DAY_FULL[walk]}` : ''}`);
+  if (sessions.length) lines.push(`${sessions.join(' · ')} at ${formatTime(a.sessionTime)}${walk >= 0 ? `, walk on ${DAY_FULL[walk]}` : ''}`);
   const goals = a.goals.map((g) => g.text.trim()).filter(Boolean);
   if (goals.length) lines.push(`Goals: ${goals.join(', ')}`);
   return lines;
