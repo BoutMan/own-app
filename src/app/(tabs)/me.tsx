@@ -25,6 +25,8 @@ import { badges as computeBadges, badgeShelf, type BadgeId } from '@/domain/badg
 import { blockForWeek } from '@/domain/programme';
 import { useCycle, useProfile } from '@/features/profile/useProfile';
 import { WhyCard } from '@/features/profile/WhyCard';
+import { planSummary } from '@/features/subscription/model';
+import { useSubscription } from '@/features/subscription/SubscriptionProvider';
 import { useSeasonSummary } from '@/features/season/today';
 import { photos, type PhotoKey } from '@/content/photos';
 import { colors, tones, type Tone } from '@/theme';
@@ -70,6 +72,8 @@ export default function Me() {
   const block = blockForWeek(s.week);
   const allBadges = computeBadges(useQuery((db) => badgeStats(db)));
   const shelf = badgeShelf(allBadges);
+  const sub = useSubscription();
+  const plan = planSummary(sub.state, sub.plans);
   const space: SpaceTile[] = [
     { label: 'My contract', photo: 'gymMirror', href: '/my-contract' },
     { label: 'Photo vault', photo: 'kettlebellPink2', href: '/review/1', lock: true },
@@ -222,9 +226,9 @@ export default function Me() {
             </Txt>
           </View>
           <View style={{ flex: 1, gap: 2 }}>
-            <Txt variant="bodyStrong">Own Yearly</Txt>
+            <Txt variant="bodyStrong">{plan.title}</Txt>
             <Txt variant="small" color={colors.grey}>
-              Free trial · ends Nov 2
+              {plan.line}
             </Txt>
           </View>
           <Icon name="chevronRight" size={14} strokeWidth={2} color={colors.grey} />

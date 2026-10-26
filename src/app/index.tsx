@@ -9,17 +9,20 @@ import { Logo, Txt } from '@/components';
 import { useQuery } from '@/db/DbProvider';
 import { activeSeason } from '@/db/repositories';
 import { photos } from '@/content/photos';
+import { isUnlocked } from '@/features/subscription/model';
+import { useSubscription } from '@/features/subscription/SubscriptionProvider';
 import { colors } from '@/theme';
 
 const SPLASH_MS = 1800;
 
-/** 01 · Splash. Full-bleed photo, "own." logo, loading bar. Goes to Welcome (Today once onboarding is persisted). */
+/** 01 · Splash. Full-bleed photo, "own." logo, loading bar. Then Welcome, Today or the paywall. */
 export default function Splash() {
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0)).current;
-  // Someone who already trained goes straight to Today (full onboarding persistence: milestone 4).
+  // Someone with a season goes to Today, or back to the paywall when no plan is active (hard paywall).
   const returning = useQuery((db) => activeSeason(db) !== undefined);
-  const target = returning ? '/(tabs)' : '/welcome';
+  const { state } = useSubscription();
+  const target = !returning ? '/welcome' : isUnlocked(state) ? '/(tabs)' : '/paywall';
 
   useEffect(() => {
     const anim = Animated.timing(progress, {

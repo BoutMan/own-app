@@ -28,6 +28,9 @@ import { useSeason } from '@/features/season/currentWeek';
 import type { DayPlan } from '@/features/onboarding/schedule';
 import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
 import { askForNotifications, notificationsAllowed } from '@/features/reminders/notifications';
+import { planSummary } from '@/features/subscription/model';
+import { resetPreviewSubscription } from '@/features/subscription/store';
+import { useSubscription } from '@/features/subscription/SubscriptionProvider';
 import { formatTime, shiftSessionTime } from '@/lib/time';
 import { colors, fontFamilyFor, radius, tones } from '@/theme';
 
@@ -45,6 +48,8 @@ function toggleSessionDay(plan: readonly DayPlan[], i: number): DayPlan[] {
 export default function Settings() {
   const profile = useProfile();
   const update = useUpdateProfile();
+  const sub = useSubscription();
+  const plan = planSummary(sub.state, sub.plans);
   const [name, setName] = useState<string | null>(null);
   const days = profile.weekPlan.flatMap((d, i) => (d === 'session' ? [i] : []));
   const equipment = profile.equipment.filter((e) => e in EQUIPMENT_LABELS);
@@ -110,10 +115,10 @@ export default function Settings() {
         <LinearGradient colors={['rgba(17,17,17,0.66)', 'rgba(17,17,17,0.15)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.75, y: 0.5 }} style={StyleSheet.absoluteFill} />
         <View style={{ gap: 3 }}>
           <Txt variant="h2" size={20} color={colors.white}>
-            Own Yearly
+            {plan.title}
           </Txt>
           <Txt variant="meta" color="rgba(255,255,255,0.88)">
-            Free trial · ends Nov 2
+            {plan.line}
           </Txt>
         </View>
         <View style={styles.planArrow}>
@@ -301,6 +306,7 @@ function PreviewTools() {
           onPress={() => {
             if (!confirm) return setConfirm(true);
             write((db) => eraseAll(db));
+            resetPreviewSubscription();
             setConfirm(false);
           }}
         />

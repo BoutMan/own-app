@@ -18,9 +18,18 @@ export async function askForNotifications(): Promise<boolean> {
   return (await Notifications.requestPermissionsAsync()).granted;
 }
 
-/** Replaces every scheduled reminder with the plan. Local only: nothing leaves the phone. */
+const TRIAL_ID = 'trial-ends';
+
+/** Cancels scheduled notifications, keeping the trial reminder unless asked. */
+async function cancel(which: 'weekly' | 'trial'): Promise<void> {
+  for (const n of await Notifications.getAllScheduledNotificationsAsync()) {
+    if ((n.identifier === TRIAL_ID) === (which === 'trial')) await Notifications.cancelScheduledNotificationAsync(n.identifier);
+  }
+}
+
+/** Replaces the weekly reminders with the plan. Local only: nothing leaves the phone. */
 export async function scheduleReminders(plan: readonly PlannedReminder[]): Promise<void> {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancel('weekly');
   if (!(await notificationsAllowed())) return;
   for (const r of plan) {
     await Notifications.scheduleNotificationAsync({
@@ -30,4 +39,15 @@ export async function scheduleReminders(plan: readonly PlannedReminder[]): Promi
       trigger: { type: Notifications.SchedulableTriggerInputTypes.WEEKLY, weekday: ((r.day + 1) % 7) + 1, hour: r.hour, minute: r.minute },
     });
   }
+}
+
+/** The paywall's promise: a reminder 2 days before the free trial ends (null cancels it). */
+export async function scheduleTrialReminder(at: Date | null, price: string): Promise<void> {
+  await cancel('trial');
+  if (!at || !(await notificationsAllowed())) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: TRIAL_ID,
+    content: { title: 'Your free trial ends in 2 days', body: `Then ${price} a year. Nothing to do to keep going; cancel in Settings if you prefer.` },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at },
+  });
 }

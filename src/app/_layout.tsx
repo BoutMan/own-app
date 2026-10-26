@@ -13,6 +13,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DbProvider } from '@/db/DbProvider';
 import { ReminderSync } from '@/features/reminders/useReminderSync';
+import { SubscriptionProvider } from '@/features/subscription/SubscriptionProvider';
 import { PreviewInsets } from '@/lib/PreviewInsets';
 import { colors } from '@/theme';
 
@@ -36,13 +37,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <PreviewInsets>
         <DbProvider>
-          <ReminderSync />
-          <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
-            <Stack.Screen name="index" options={{ animation: 'fade' }} />
-            <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
-            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-          </Stack>
+          <SubscriptionProvider>
+            <ReminderSync />
+            <StatusBar style="auto" />
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.white } }}>
+              <Stack.Screen name="index" options={{ animation: 'fade' }} />
+              <Stack.Screen name="(onboarding)" options={{ animation: 'fade' }} />
+              <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+            </Stack>
+          </SubscriptionProvider>
         </DbProvider>
       </PreviewInsets>
     </SafeAreaProvider>

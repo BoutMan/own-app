@@ -6,30 +6,63 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Heading, Icon, Txt } from '@/components';
 import { photos } from '@/content/photos';
+import type { PlanId } from '@/features/subscription/model';
+import { useSubscription } from '@/features/subscription/SubscriptionProvider';
 import { colors, radius, space, tones } from '@/theme';
 
-type Plan = 'yearly' | 'monthly';
-
-// Prices from the spec. Real prices and the trial come from RevenueCat in milestone 4.
-const plans: Record<Plan, { title: string; price: string; badge?: string }> = {
-  yearly: { title: 'Yearly', price: '$59.99 / year · $1.15 a week', badge: '7 days free' },
-  monthly: { title: 'Monthly', price: '$14.99 / month' },
-};
+const titles: Record<PlanId, string> = { yearly: 'Yearly', monthly: 'Monthly' };
 
 const perks = ['Guided sessions', 'Your +1, every time', 'Cycle-aware', 'Progress past the scale'] as const;
 
-/** 11 · Paywall — yearly with a 7-day trial (highlighted) or monthly. */
+/**
+ * 11 · Paywall — yearly with a 7-day trial (highlighted) or monthly. Hard paywall: the app opens
+ * once the store confirms the plan. Prices and the trial come from the store (RevenueCat).
+ */
 export default function Paywall() {
   const insets = useSafeAreaInsets();
-  const [plan, setPlan] = useState<Plan>('yearly');
-  // TODO(milestone 4): purchase through RevenueCat, then persist onboarding before entering the app.
+  const sub = useSubscription();
+  const [plan, setPlan] = useState<PlanId>('yearly');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const enter = () => router.replace('/(tabs)');
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/welcome'));
+  const yearly = sub.plans.yearly;
+  const monthly = sub.plans.monthly;
+  const trial = yearly.trialDays;
+  const plans: Record<PlanId, { title: string; price: string; badge?: string }> = {
+    yearly: { title: titles.yearly, price: `${yearly.price} / year${yearly.perWeek ? ` · ${yearly.perWeek} a week` : ''}`, ...(trial ? { badge: `${trial} days free` } : {}) },
+    monthly: { title: titles.monthly, price: `${monthly.price} / month` },
+  };
+
+  const subscribe = async () => {
+    // Development build without store keys: nothing to sell, the app stays open.
+    if (sub.state.status === 'unconfigured') return enter();
+    setBusy(true);
+    setMessage(null);
+    try {
+      if (await sub.buy(plan)) enter();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'The purchase did not go through. Nothing was charged.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  const restore = async () => {
+    setMessage(null);
+    try {
+      const s = await sub.restore();
+      if (s.status === 'trial' || s.status === 'active') enter();
+      else setMessage('No plan found for this Apple ID.');
+    } catch {
+      setMessage('Could not reach the App Store. Try again in a moment.');
+    }
+  };
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
       <View style={styles.photo}>
         <Image source={photos.gymMirror} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition={{ top: '20%', left: '50%' }} />
-        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={enter} style={[styles.close, { top: Math.max(insets.top, 20) + 8 }]}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={close} style={[styles.close, { top: Math.max(insets.top, 20) + 8 }]}>
           <Icon name="close" size={16} strokeWidth={2} />
         </Pressable>
       </View>
@@ -49,7 +82,7 @@ export default function Paywall() {
         </View>
 
         <View style={{ gap: 10, paddingTop: 6 }}>
-          {(Object.keys(plans) as Plan[]).map((key) => {
+          {(Object.keys(plans) as PlanId[]).map((key) => {
             const p = plans[key];
             const selected = plan === key;
             return (
@@ -88,16 +121,26 @@ export default function Paywall() {
         </View>
 
         <View style={{ marginTop: 'auto', gap: 12, paddingTop: 10 }}>
-          <Button label={plan === 'yearly' ? 'Start my 7-day free trial' : 'Subscribe monthly'} size="lg" onPress={enter} />
+          <Button
+            label={plan === 'yearly' && trial ? `Start my ${trial}-day free trial` : plan === 'yearly' ? 'Subscribe yearly' : 'Subscribe monthly'}
+            size="lg"
+            disabled={busy}
+            onPress={subscribe}
+          />
           <Txt variant="small" color={colors.grey} style={{ textAlign: 'center', lineHeight: 17 }}>
             {plan === 'yearly'
-              ? 'Then $59.99 a year. We remind you 2 days before it ends. Cancel anytime.'
-              : '$14.99 a month. Cancel anytime.'}
+              ? `${trial ? 'Then ' : ''}${yearly.price} a year.${trial ? ' We remind you 2 days before it ends.' : ''} Cancel anytime.`
+              : `${monthly.price} a month. Cancel anytime.`}
           </Txt>
+          {message ? (
+            <Txt variant="small" color={colors.ink} style={{ textAlign: 'center' }}>
+              {message}
+            </Txt>
+          ) : null}
           <View style={styles.links}>
             {['Restore', 'Privacy', 'Terms'].map((l) => (
-              // TODO(milestone 4): "Restore" calls RevenueCat; Terms gets its own page.
-              <Pressable key={l} accessibilityRole="link" hitSlop={8} onPress={l === 'Restore' ? undefined : () => router.push('/settings/privacy')}>
+              // TODO: Terms gets its own page (hosted, required by the App Store) before release.
+              <Pressable key={l} accessibilityRole="link" hitSlop={8} onPress={l === 'Restore' ? restore : () => router.push('/settings/privacy')}>
                 <Txt variant="small" color={colors.grey} style={{ textDecorationLine: 'underline' }}>
                   {l}
                 </Txt>

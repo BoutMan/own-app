@@ -10,3 +10,5 @@ export async function askForNotifications(): Promise<boolean> {
 }
 
 export async function scheduleReminders(_plan: readonly PlannedReminder[]): Promise<void> {}
+
+export async function scheduleTrialReminder(_at: Date | null, _price: string): Promise<void> {}
