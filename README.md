@@ -69,4 +69,5 @@ scripts/build-preview  web preview builder
 - [x] Milestone 3 — session engine: logged sets, +1 rule, deloads, missed weeks, plan B (src/domain/engine, tested)
   - supersets and circuits logged per move, early deload on two signs of overtraining or a stall
 - [x] Milestone 4 — persisted onboarding + paywall (RevenueCat; keys in .env, see .env.example)
-- [ ] Milestone 5 — local reminders, Sunday check-in, block reviews (done); photo vault (to do)
+- [x] Milestone 5 — local reminders, Sunday check-in, block reviews, photo vault (Face ID), calendar
+- Legal: `npm run legal` builds legal/terms.html and legal/privacy.html to host (fill in ENTITY in src/content/legal.ts first)
