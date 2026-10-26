@@ -151,8 +151,7 @@ export default function Paywall() {
           ) : null}
           <View style={styles.links}>
             {['Restore', 'Privacy', 'Terms'].map((l) => (
-              // TODO: Terms gets its own page (hosted, required by the App Store) before release.
-              <Pressable key={l} accessibilityRole="link" hitSlop={8} onPress={l === 'Restore' ? restore : () => router.push('/settings/privacy')}>
+              <Pressable key={l} accessibilityRole="link" hitSlop={8} onPress={l === 'Restore' ? restore : () => router.push(l === 'Terms' ? '/legal/terms' : '/legal/privacy')}>
                 <Txt variant="small" color={colors.grey} style={{ textDecorationLine: 'underline' }}>
                   {l}
                 </Txt>

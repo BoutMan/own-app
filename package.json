@@ -18,6 +18,7 @@
     "expo-local-authentication": "~58.0.2",
     "expo-notifications": "~58.1.5",
     "expo-router": "~58.0.24",
+    "expo-sharing": "~58.0.19",
     "expo-splash-screen": "~58.0.10",
     "expo-sqlite": "~58.0.13",
     "expo-status-bar": "~58.0.3",
@@ -54,7 +55,8 @@
     "lint": "expo lint",
     "preview": "node scripts/build-preview.mjs",
     "test": "jest",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "legal": "node --experimental-strip-types --no-warnings scripts/build-legal.mjs"
   },
   "private": true,
   "jest": {

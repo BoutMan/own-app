@@ -7,7 +7,9 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { CircleButton, Heading, Icon, ListGroup, ListRow, Pill, Screen, Switch, Txt, type IconName } from '@/components';
 import { photos } from '@/content/photos';
 import { useDb } from '@/db/DbProvider';
-import { eraseAll, eraseCycle } from '@/db/repositories';
+import { eraseAll, eraseCycle, exportAll } from '@/db/repositories';
+import { shareExport } from '@/features/privacy/exportFile';
+import { isoDate } from '@/lib/dates';
 import { deleteAllPhotoFiles } from '@/features/vault/files';
 import { colors, photoHeader, radius, tones, type Tone } from '@/theme';
 
@@ -33,7 +35,8 @@ export default function Privacy() {
   const [confirmErase, setConfirmErase] = useState(false);
   const [erased, setErased] = useState(false);
   const [cycleStep, setCycleStep] = useState<'idle' | 'confirm' | 'done'>('idle');
-  const { write } = useDb();
+  const { db, write } = useDb();
+  const [exported, setExported] = useState(false);
   const erase = () => {
     if (!confirmErase) return setConfirmErase(true);
     write((db) => eraseAll(db));
@@ -115,10 +118,17 @@ export default function Privacy() {
           <ListRow tileOnWhite icon="heart" tone="vanilla" label="Apple Health" detail="Read on your phone: steps, sleep, cycle" right={<Switch value={health} onChange={setHealth} accessibilityLabel="Apple Health" />} />
           <ListRow tileOnWhite icon="card" tone="vanilla" label="Your subscription" detail="Handled by the App Store, not by us" />
         </ListGroup>
-        {/* TODO(milestone 5): export as a file the user shares herself (share sheet). */}
         <View style={styles.actions}>
           {[
-            { icon: 'download' as const, title: 'Export my data', text: 'One file, in minutes', onPress: undefined },
+            {
+              icon: 'download' as const,
+              title: 'Export my data',
+              text: exported ? 'Ready: choose where it goes' : 'One file, in minutes',
+              onPress: () => {
+                const json = JSON.stringify(exportAll(db), null, 2);
+                void shareExport(`own-export-${isoDate(new Date())}.json`, json).then(() => setExported(true), () => {});
+              },
+            },
             {
               icon: 'trash' as const,
               title: 'Erase my cycle',
@@ -150,7 +160,7 @@ export default function Privacy() {
             {confirmErase ? 'Tap again: this cannot be undone' : erased ? 'Everything is erased' : 'Erase all my data'}
           </Txt>
         </Pressable>
-        <Pressable accessibilityRole="link" style={{ alignSelf: 'center' }}>
+        <Pressable accessibilityRole="link" style={{ alignSelf: 'center' }} onPress={() => router.push('/legal/privacy')}>
           <Txt variant="meta" color={colors.grey} style={{ textDecorationLine: 'underline' }}>
             Read the full privacy policy
           </Txt>

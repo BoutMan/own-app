@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, CircleButton, CTA, Heading, Icon, Pill, Screen, Txt } from '@/components';
 import { checkpoints, type Checkpoint } from '@/domain/programme';
@@ -84,7 +84,9 @@ export default function Vault() {
         <>
           {lock.unprotected ? (
             <Txt variant="small" color={colors.grey}>
-              This phone has no passcode or Face ID, so the vault opens for anyone holding it. Set a passcode in your iPhone settings to lock it.
+              {Platform.OS === 'web'
+                ? 'The preview has no Face ID: the vault opens directly. On the phone, it asks for Face ID or the passcode.'
+                : 'This phone has no passcode or Face ID, so the vault opens for anyone holding it. Set a passcode in your iPhone settings to lock it.'}
             </Txt>
           ) : null}
 

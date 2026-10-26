@@ -209,7 +209,7 @@ export default function Subscription() {
               Restore purchases
             </Txt>
           </Pressable>
-          <Pressable accessibilityRole="link" onPress={() => router.push('/settings/privacy')}>
+          <Pressable accessibilityRole="link" onPress={() => router.push('/legal/terms')}>
             <Txt variant="meta" color={colors.grey} style={{ textDecorationLine: 'underline' }}>
               Terms
             </Txt>
