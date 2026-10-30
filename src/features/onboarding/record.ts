@@ -22,6 +22,7 @@ export function toOnboardingRecord(a: OnboardingAnswers, signedAt: Date): Onboar
   for (const [label, value] of Object.entries(a.markers) as [Marker, number | null][]) if (value != null) markers[markerIds[label]] = value;
   return {
     firstName: a.firstName.trim() || null,
+    myWhy: a.why.trim() || null,
     feelings: [...a.feelings],
     goals: a.goals.map((g, i) => ({ slot: slots[i]!, text: g.text, baseline: g.today || null })),
     health: {

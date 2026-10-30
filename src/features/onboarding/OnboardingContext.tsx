@@ -24,6 +24,8 @@ export type Goal = { text: string; today: string };
 
 export type OnboardingAnswers = {
   firstName: string;
+  /** "My why" in one sentence (guide p. 9–10), optional. */
+  why: string;
   feelings: Feeling[];
   goals: [Goal, Goal, Goal];
   health: Record<HealthFlag, boolean>;
@@ -50,6 +52,7 @@ const emptyGoal: Goal = { text: '', today: '' };
 function initialAnswers(): OnboardingAnswers {
   return {
     firstName: '',
+    why: '',
     feelings: [],
     goals: [emptyGoal, emptyGoal, emptyGoal],
     health: { pregnancy: false, condition: false, injury: false, longBreak: false },

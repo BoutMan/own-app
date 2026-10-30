@@ -157,33 +157,13 @@ export function DotRating({ label, value, onChange }: DotRatingProps) {
   );
 }
 
-type CheckRowProps = { label: string; checked: boolean; onChange: (checked: boolean) => void };
-
-/** 22px checkbox with a label (pelvic floor check). */
-export function CheckRow({ label, checked, onChange }: CheckRowProps) {
-  return (
-    <Pressable
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-      onPress={() => onChange(!checked)}
-      style={styles.checkRow}
-    >
-      <View style={[styles.box, checked ? styles.boxOn : styles.boxOff]}>
-        {checked ? <Icon name="check" size={14} strokeWidth={2.6} color={colors.white} /> : null}
-      </View>
-      <Txt variant="body" size={14} style={{ flex: 1 }}>
-        {label}
-      </Txt>
-    </Pressable>
-  );
-}
-
-type NumberTileProps = { n: number; tone: Tone; size?: number };
+/** `onTone`: white square on a tone card (the ToneCard look of the final art direction). */
+type NumberTileProps = { n: number; tone: Tone; size?: number; onTone?: boolean };
 
 /** Tone square holding a step number (goals, blocks). */
-export function NumberTile({ n, tone, size = 40 }: NumberTileProps) {
+export function NumberTile({ n, tone, size = 40, onTone }: NumberTileProps) {
   return (
-    <View style={[styles.numberTile, { width: size, height: size, backgroundColor: tones[tone].bg }]}>
+    <View style={[styles.numberTile, { width: size, height: size, backgroundColor: onTone ? colors.white : tones[tone].bg }]}>
       <Txt variant="h2" size={19} weight={600} color={tones[tone].soft} style={{ letterSpacing: 0 }}>
         {String(n)}
       </Txt>
@@ -210,9 +190,5 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: 'row', alignItems: 'center', height: 38, gap: 4 },
   dots: { flexDirection: 'row', gap: 4 },
   dot: { width: 18, height: 18, borderRadius: 9 },
-  checkRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  box: { width: 22, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  boxOn: { backgroundColor: colors.ink },
-  boxOff: { borderWidth: 1.5, borderColor: colors.radioOff },
   numberTile: { borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });

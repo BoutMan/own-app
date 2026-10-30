@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Heading, Icon, Txt } from '@/components';
+import { CTA, Heading, Icon, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { askForCalendar, syncCalendar } from '@/features/calendar/device';
 import { planCalendar } from '@/features/calendar/plan';
@@ -133,9 +133,8 @@ export default function Paywall() {
         </View>
 
         <View style={{ marginTop: 'auto', gap: 12, paddingTop: 10 }}>
-          <Button
+          <CTA
             label={plan === 'yearly' && trial ? `Start my ${trial}-day free trial` : plan === 'yearly' ? 'Subscribe yearly' : 'Subscribe monthly'}
-            size="lg"
             disabled={busy}
             onPress={subscribe}
           />

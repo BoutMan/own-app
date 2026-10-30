@@ -3,14 +3,14 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Heading, Icon, Screen, Txt } from '@/components';
+import { CTA, Heading, Icon, Screen, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { blocks as programmeBlocks } from '@/domain/programme';
 import { formatShort, seasonEnd } from '@/lib/dates';
 import { formatTime } from '@/lib/time';
 import { useOnboarding, type Equipment, type OnboardingAnswers } from '@/features/onboarding/OnboardingContext';
 import { NumberTile } from '@/features/onboarding/ui';
-import { colors, space, type Tone } from '@/theme';
+import { colors, space, tones, type Tone } from '@/theme';
 
 const blockTones: Tone[] = ['vanilla', 'latte', 'mauve'];
 const blockList = programmeBlocks.map((b, i) => ({
@@ -71,13 +71,13 @@ export default function Ready() {
 
         <View style={{ gap: 8 }}>
           {blockList.map((b) => (
-            <View key={b.n} style={styles.block}>
-              <NumberTile n={b.n} tone={b.tone} size={42} />
+            <View key={b.n} style={[styles.block, { backgroundColor: tones[b.tone].bg }]}>
+              <NumberTile n={b.n} tone={b.tone} size={38} onTone />
               <View style={{ flex: 1, gap: 2 }}>
-                <Txt variant="body" weight={500}>
+                <Txt variant="cardTitle" color={tones[b.tone].strong}>
                   {b.title}
                 </Txt>
-                <Txt variant="small" color={colors.grey}>
+                <Txt variant="small" color={tones[b.tone].soft}>
                   {b.text}
                 </Txt>
               </View>
@@ -100,7 +100,7 @@ export default function Ready() {
         </View>
       </Screen>
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 16) + 12 }]}>
-        <Button label="Unlock my season" size="lg" onPress={() => router.push('/paywall')} />
+        <CTA label="Unlock my season" onPress={() => router.push('/paywall')} />
       </View>
     </View>
   );
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: 14 },
   avatars: { flexDirection: 'row' },
   avatar: { width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: colors.white },
-  block: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12, paddingHorizontal: 14, borderRadius: 20, backgroundColor: colors.mist },
+  block: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 22 },
   made: { borderRadius: 22, borderWidth: 1, borderColor: colors.line, paddingVertical: 14, paddingHorizontal: 16, gap: 10 },
   line: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   footer: { paddingHorizontal: space.screenX, paddingTop: 8 },

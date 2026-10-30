@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, Icon, PhotoTile, Switch, Txt } from '@/components';
+import { CTA, Icon, PhotoTile, Switch, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { formatLong } from '@/lib/dates';
 import { formatTime, shiftSessionTime } from '@/lib/time';
@@ -23,7 +23,7 @@ export default function Dates() {
       accent="yourself"
       subtitle="A session that isn't in the calendar is a session that won't happen."
       gap={18}
-      footer={<Button label="Continue" size="lg" disabled={countDates(answers.week) === 0} onPress={() => router.push('/contract')} />}
+      footer={<CTA label="Continue" disabled={countDates(answers.week) === 0} onPress={() => router.push('/contract')} />}
     >
       <View>
         <PhotoTile source={photos.morningWalk} height={120} focus={{ top: '30%', left: '50%' }} />

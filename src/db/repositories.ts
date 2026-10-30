@@ -236,6 +236,8 @@ export function updateProfile(db: Db, patch: ProfilePatch): void {
 
 export type OnboardingRecord = {
   firstName: string | null;
+  /** "My why", one sentence; left unchanged when null. */
+  myWhy?: string | null;
   feelings: string[];
   goals: { slot: 'performance' | 'sensation' | 'free'; text: string; baseline: string | null }[];
   health: {
@@ -274,6 +276,7 @@ export function saveOnboarding(db: Db, r: OnboardingRecord): number {
     const existing = tx.select({ id: profile.id }).from(profile).where(eq(profile.id, 1)).get();
     const values = {
       firstName: r.firstName,
+      ...(r.myWhy ? { myWhy: r.myWhy } : {}),
       feelings: r.feelings,
       place: r.place,
       equipment: r.equipment,

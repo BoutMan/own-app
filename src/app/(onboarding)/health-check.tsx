@@ -1,16 +1,16 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Heading, Switch, Txt } from '@/components';
+import { CTA, Heading, ListGroup, ListRow, Switch, Txt, type IconName } from '@/components';
 import { useOnboarding, type HealthFlag, type PelvicSymptom } from '@/features/onboarding/OnboardingContext';
-import { CheckRow, Note, StepScreen } from '@/features/onboarding/ui';
-import { colors } from '@/theme';
+import { Note, StepScreen } from '@/features/onboarding/ui';
+import { colors, type Tone } from '@/theme';
 
-const flags: { key: HealthFlag; label: string }[] = [
-  { key: 'pregnancy', label: 'Pregnant, or gave birth this year' },
-  { key: 'condition', label: 'Heart, joint or chronic condition' },
-  { key: 'injury', label: 'Coming back from injury or surgery' },
-  { key: 'longBreak', label: 'No training for 2+ years' },
+const flags: { key: HealthFlag; label: string; icon: IconName; tone: Tone }[] = [
+  { key: 'pregnancy', label: 'Pregnant, or gave birth this year', icon: 'person', tone: 'mauve' },
+  { key: 'condition', label: 'Heart, joint or chronic condition', icon: 'heart', tone: 'vanilla' },
+  { key: 'injury', label: 'Coming back from injury or surgery', icon: 'restart', tone: 'fog' },
+  { key: 'longBreak', label: 'No training for 2+ years', icon: 'timer', tone: 'latte' },
 ];
 
 const symptoms: { key: PelvicSymptom; label: string }[] = [
@@ -34,22 +34,19 @@ export default function HealthCheck() {
       accent="check-in"
       subtitle="Your answers adapt the programme. They never leave your phone."
       gap={18}
-      footer={<Button label="Continue" size="lg" onPress={() => router.push('/ground')} />}
+      footer={<CTA label="Continue" onPress={() => router.push('/ground')} />}
     >
-      <View style={styles.group}>
-        {flags.map((f, i) => (
-          <View key={f.key} style={[styles.row, i < flags.length - 1 && styles.divider]}>
-            <Txt variant="body" style={{ flex: 1 }}>
-              {f.label}
-            </Txt>
-            <Switch
-              value={answers.health[f.key]}
-              onChange={(v) => update('health', { ...answers.health, [f.key]: v })}
-              accessibilityLabel={f.label}
-            />
-          </View>
+      <ListGroup>
+        {flags.map((f) => (
+          <ListRow
+            key={f.key}
+            icon={f.icon}
+            tone={f.tone}
+            label={f.label}
+            right={<Switch value={answers.health[f.key]} onChange={(v) => update('health', { ...answers.health, [f.key]: v })} accessibilityLabel={f.label} />}
+          />
         ))}
-      </View>
+      </ListGroup>
 
       <View style={{ gap: 10 }}>
         <View style={styles.sectionHead}>
@@ -60,14 +57,18 @@ export default function HealthCheck() {
             30 seconds
           </Txt>
         </View>
-        {symptoms.map((s) => (
-          <CheckRow
-            key={s.key}
-            label={s.label}
-            checked={answers.pelvic[s.key]}
-            onChange={(v) => update('pelvic', { ...answers.pelvic, [s.key]: v })}
-          />
-        ))}
+        <ListGroup>
+          {symptoms.map((s) => (
+            <ListRow
+              key={s.key}
+              icon="halfCircle"
+              tone="mauve"
+              tileOnWhite
+              label={s.label}
+              right={<Switch value={answers.pelvic[s.key]} onChange={(v) => update('pelvic', { ...answers.pelvic, [s.key]: v })} accessibilityLabel={s.label} />}
+            />
+          ))}
+        </ListGroup>
       </View>
 
       {anySymptom ? (
@@ -80,8 +81,5 @@ export default function HealthCheck() {
 }
 
 const styles = StyleSheet.create({
-  group: { borderRadius: 22, backgroundColor: colors.mist, paddingHorizontal: 16, paddingVertical: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, gap: 12 },
-  divider: { borderBottomWidth: 1, borderBottomColor: colors.lineOnMist },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
 });

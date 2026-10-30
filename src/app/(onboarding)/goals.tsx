@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Txt } from '@/components';
+import { CTA, Txt } from '@/components';
 import { useOnboarding, type Goal } from '@/features/onboarding/OnboardingContext';
 import { Note, NumberTile, StepScreen } from '@/features/onboarding/ui';
 import { colors, fontFamilyFor, tones, type Tone } from '@/theme';
@@ -35,7 +35,7 @@ export default function Goals() {
       title={'Three goals\nyou can keep'}
       accent="keep"
       subtitle="Write them as if week 12 already happened. Something you can answer yes or no to."
-      footer={<Button label="Continue" size="lg" onPress={() => router.push('/health-check')} />}
+      footer={<CTA label="Continue" onPress={() => router.push('/health-check')} />}
     >
       <View style={{ gap: 10 }}>
         {slots.map((slot, i) => {
@@ -43,14 +43,14 @@ export default function Goals() {
           const goal = answers.goals[idx];
           const free = idx === 2;
           return (
-            <View key={slot.kind} style={[styles.card, free ? styles.cardFree : styles.cardFilled]}>
-              <NumberTile n={idx + 1} tone={slot.tone} />
+            <View key={slot.kind} style={[styles.card, { backgroundColor: tones[slot.tone].bg }]}>
+              <NumberTile n={idx + 1} tone={slot.tone} size={38} onTone />
               <View style={styles.body}>
                 <Txt variant="eyebrow" color={tones[slot.tone].soft} style={{ letterSpacing: 0.96 }}>
                   {slot.kind}
                 </Txt>
                 {slot.prompt ? (
-                  <Txt variant="meta" color={colors.grey}>
+                  <Txt variant="meta" color={tones[slot.tone].soft}>
                     {slot.prompt}
                   </Txt>
                 ) : null}
@@ -58,19 +58,19 @@ export default function Goals() {
                   value={goal.text}
                   onChangeText={(text) => setGoal(idx, { text })}
                   placeholder={slot.placeholder}
-                  placeholderTextColor={colors.grey}
+                  placeholderTextColor={`${tones[slot.tone].soft}8C`}
                   accessibilityLabel={`${slot.kind} goal`}
                   multiline={!free}
-                  style={[styles.input, free && styles.inputLine]}
+                  style={[styles.input, { color: tones[slot.tone].strong }, free && [styles.inputLine, { borderBottomColor: tones[slot.tone].ring }]]}
                 />
                 {slot.todayPlaceholder ? (
                   <TextInput
                     value={goal.today}
                     onChangeText={(today) => setGoal(idx, { today })}
                     placeholder={slot.todayPlaceholder}
-                    placeholderTextColor={colors.grey}
+                    placeholderTextColor={`${tones[slot.tone].soft}8C`}
                     accessibilityLabel={`${slot.kind}: where you are today`}
-                    style={styles.today}
+                    style={[styles.today, { color: tones[slot.tone].strong }]}
                   />
                 ) : null}
               </View>
@@ -85,10 +85,8 @@ export default function Goals() {
 
 const styles = StyleSheet.create({
   card: { borderRadius: 22, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', gap: 14, alignItems: 'flex-start' },
-  cardFilled: { backgroundColor: colors.mist },
-  cardFree: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.radioOff },
   body: { flex: 1, gap: 4 },
-  input: { fontFamily: fontFamilyFor(500), fontSize: 16, lineHeight: 21, color: colors.ink, padding: 0 },
-  inputLine: { height: 40, borderBottomWidth: 1, borderBottomColor: colors.radioOff, fontFamily: fontFamilyFor(400) },
-  today: { fontFamily: fontFamilyFor(400), fontSize: 13, color: colors.ink, padding: 0 },
+  input: { fontFamily: fontFamilyFor(700), fontSize: 16, lineHeight: 21, letterSpacing: -0.32, padding: 0 },
+  inputLine: { height: 40, borderBottomWidth: 1 },
+  today: { fontFamily: fontFamilyFor(400), fontSize: 13, padding: 0 },
 });

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, TextInput } from 'react-native';
 
-import { Button, Txt } from '@/components';
+import { CTA, Txt } from '@/components';
 import { useDb } from '@/db/DbProvider';
 import { saveOnboarding } from '@/db/repositories';
 import { formatShort, seasonEnd } from '@/lib/dates';
@@ -33,7 +33,7 @@ export default function Contract() {
       gap={18}
       footer={
         <>
-          <Button label="Sign & start my season" size="lg" disabled={!answers.signed} onPress={sign} />
+          <CTA label="Sign & start my season" disabled={!answers.signed} onPress={sign} />
           <Pressable accessibilityRole="button" style={{ alignSelf: 'center' }} hitSlop={8} onPress={() => void shareStartDate(answers.startDate)}>
             <Txt variant="body" size={14} color={colors.grey}>
               Send my start date to a friend

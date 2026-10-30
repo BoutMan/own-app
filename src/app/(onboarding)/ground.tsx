@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Button, Txt } from '@/components';
+import { CTA, Txt } from '@/components';
 import { photos } from '@/content/photos';
 import { toggleIn, useOnboarding, type Equipment } from '@/features/onboarding/OnboardingContext';
 import { Chip, Note, SelectPhotoCard, StepScreen } from '@/features/onboarding/ui';
@@ -37,7 +37,7 @@ export default function Ground() {
       title={'Where will\nyou train?'}
       accent="train?"
       subtitle="Every session comes in both versions. Switch any week."
-      footer={<Button label="Continue" size="lg" onPress={() => router.push('/starting-point')} />}
+      footer={<CTA label="Continue" onPress={() => router.push('/starting-point')} />}
     >
       <View style={styles.row}>
         {places.map((p) => (

@@ -1,10 +1,20 @@
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Button, Icon, Txt } from '@/components';
-import { MARKERS, useOnboarding } from '@/features/onboarding/OnboardingContext';
+import { Button, CTA, Gauge, Icon, Txt, type IconName } from '@/components';
+import { MARKERS, useOnboarding, type Marker } from '@/features/onboarding/OnboardingContext';
 import { DotRating, StepScreen } from '@/features/onboarding/ui';
-import { colors, radius } from '@/theme';
+import { colors, radius, type Tone } from '@/theme';
+
+const markerLook: Record<Marker, { icon: IconName; tone: Tone }> = {
+  'Morning energy': { icon: 'bolt', tone: 'vanilla' },
+  Sleep: { icon: 'moon', tone: 'fog' },
+  Strength: { icon: 'dumbbell', tone: 'latte' },
+  Breath: { icon: 'breath', tone: 'fog' },
+  'Posture & back': { icon: 'posture', tone: 'mauve' },
+  Mood: { icon: 'smile', tone: 'vanilla' },
+  Confidence: { icon: 'crown', tone: 'mauve' },
+};
 
 /** 07 · Onboarding 5/7 — the seven markers rated 1–10, day-0 photos. */
 export default function StartingPoint() {
@@ -16,12 +26,23 @@ export default function StartingPoint() {
       accent="starting"
       subtitle="Rate today, 1 to 10. Be honest: you'll redo it every four weeks."
       gap={18}
-      footer={<Button label="Continue" size="lg" onPress={() => router.push('/dates')} />}
+      footer={<CTA label="Continue" onPress={() => router.push('/dates')} />}
     >
-      <View style={styles.markers}>
-        {MARKERS.map((m) => (
-          <DotRating key={m} label={m} value={answers.markers[m]} onChange={(v) => update('markers', { ...answers.markers, [m]: v })} />
-        ))}
+      {/* Rated markers become gauges, as on the Sunday check-in (21); a tap rates again. */}
+      <View style={{ gap: 8 }}>
+        {MARKERS.map((m) => {
+          const v = answers.markers[m];
+          const set = (n: number | null) => update('markers', { ...answers.markers, [m]: n });
+          return v == null ? (
+            <View key={m} style={styles.rate}>
+              <DotRating label={m} value={null} onChange={set} />
+            </View>
+          ) : (
+            <Pressable key={m} accessibilityRole="button" accessibilityLabel={`${m}, ${v} out of 10. Rate again`} onPress={() => set(null)}>
+              <Gauge label={m} percent={v * 10} tone={markerLook[m].tone} icon={markerLook[m].icon} value={`${v}/10`} height={58} />
+            </Pressable>
+          );
+        })}
       </View>
 
       <View style={styles.photos}>
@@ -47,7 +68,7 @@ export default function StartingPoint() {
 }
 
 const styles = StyleSheet.create({
-  markers: { borderRadius: 22, backgroundColor: colors.mist, paddingVertical: 10, paddingHorizontal: 14, gap: 4 },
+  rate: { borderRadius: 20, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14, paddingVertical: 6 },
   photos: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, borderWidth: 1, borderColor: colors.line, paddingVertical: 10, paddingLeft: 10, paddingRight: 14 },
   slots: { flexDirection: 'row', gap: 4 },
   slot: { width: 34, height: 46, borderRadius: 10, backgroundColor: colors.mist, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.radioOff },
