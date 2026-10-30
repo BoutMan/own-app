@@ -70,4 +70,5 @@ scripts/build-preview  web preview builder
   - supersets and circuits logged per move, early deload on two signs of overtraining or a stall
 - [x] Milestone 4 — persisted onboarding + paywall (RevenueCat; keys in .env, see .env.example)
 - [x] Milestone 5 — local reminders, Sunday check-in, block reviews, photo vault (Face ID), calendar
+- iPhone development build: see docs/build-ios.md (EAS Build, no Mac needed)
 - Legal: `npm run legal` builds legal/terms.html and legal/privacy.html to host (fill in ENTITY in src/content/legal.ts first)
