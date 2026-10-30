@@ -267,7 +267,7 @@ export default function GuidedSession() {
                 {circuit ? 'Your rounds' : 'Your sets'}
               </Heading>
               <Txt variant="meta" color={colors.grey}>
-                {circuit ? `${step.restSeconds} s between moves` : step.restSeconds ? `rest ${step.restSeconds} s` : 'no rest'}
+                {circuit ? (step.restSeconds ? `${step.restSeconds} s between moves` : 'no rest between moves') : step.restSeconds ? `rest ${step.restSeconds} s` : 'no rest'}
               </Txt>
             </View>
             {Array.from({ length: step.sets }, (_, i) => {
@@ -312,7 +312,7 @@ export default function GuidedSession() {
                 ) : null}
                 <View style={styles.inputs}>
                   <Stepper
-                    label={hold ? 'Seconds' : circuit ? `Reps in ${step.target.replace(' work', '')}` : 'Reps'}
+                    label={hold ? 'Seconds' : circuit && step.target.endsWith(' work') ? `Reps in ${step.target.replace(' work', '')}` : 'Reps'}
                     value={String(v.amount)}
                     onMinus={() => setPartInput(part, { amount: Math.max(hold ? 5 : 0, v.amount - (hold ? 5 : 1)) })}
                     onPlus={() => setPartInput(part, { amount: v.amount + (hold ? 5 : 1) })}

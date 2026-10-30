@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 
 import { getSession } from '@/domain/programme';
 
-import { toPlayable } from './playable';
+import { applyVariant, toPlayable } from './playable';
 import { logSet, restLeft, skipRest, startRunner, totalToLog, type RunnerState } from './runner';
 
 function runToEnd(id: string, week: 1 | 2 | 3 | 8) {
@@ -71,3 +71,19 @@ describe('guided session runner', () => {
     expect(restLeft(s, 0)).toBe(60); // between rounds
   });
 });
+
+describe('bare minimum (guide p. 53)', () => {
+  it('plays 3 rounds of four moves, no rest between moves, 1 minute between rounds', () => {
+    const v = applyVariant(toPlayable(getSession('b2-a')!, 6), 'tenMin');
+    expect(v.session.id).toBe('b2-a');
+    expect(v.session.steps.map((st) => st.target)).toEqual(['15 reps', '10 reps', '15 reps', '30 s']);
+    let s = startRunner(v.session, 0);
+    s = logSet(v.session, s, 0);
+    expect(s.restEndsAt).toBeNull();
+    for (let i = 0; i < 3; i++) s = logSet(v.session, s, 0);
+    expect([s.setIndex, s.restTotal]).toEqual([1, 60]);
+    for (let i = 0; i < 8; i++) s = logSet(v.session, skipRest(s), 0);
+    expect(s.finished).toBe(true);
+  });
+});
+

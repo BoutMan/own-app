@@ -222,11 +222,54 @@ export function capSets(session: PlayableSession, max: number): PlayableSession 
   return { ...session, steps: session.steps.map((st) => (st.sets > max ? { ...st, sets: max } : st)) };
 }
 
-/** The seven "My week is complicated" cases (guide p. 55) that change today's session. */
-export type Variant = 'full' | 'short' | 'away' | 'ill' | 'period' | 'packed' | 'noKit';
+/**
+ * The seven "My week is complicated" cases (guide p. 55) that change today's session, plus the
+ * bare minimum (p. 53), the "10-min version" on Today.
+ */
+export type Variant = 'full' | 'short' | 'away' | 'ill' | 'period' | 'packed' | 'noKit' | 'tenMin';
 
 export function isVariant(v: string | undefined): v is Variant {
-  return v !== undefined && ['full', 'short', 'away', 'ill', 'period', 'packed', 'noKit'].includes(v);
+  return v !== undefined && ['full', 'short', 'away', 'ill', 'period', 'packed', 'noKit', 'tenMin'].includes(v);
+}
+
+/**
+ * The bare minimum, guide p. 53: 3 rounds of 15 squats, 10 push-ups (at your level), 15 glute
+ * bridges, 30 s of plank, no rest between exercises, 1 minute between rounds. It counts as the
+ * session of the day. Nothing is counted for the +1: "it won't make you progress".
+ */
+export function bareMinimum(base: PlayableSession): PlayableSession {
+  const station = (key: string, id: string, name: string, target: string, note?: string): PlayableStep => ({
+    key: `bm-${key}`,
+    name,
+    accent: accentOf(name),
+    sets: 3,
+    target,
+    restSeconds: 0,
+    ...(note ? { note } : {}),
+    muscles: card(id)?.muscles.slice(0, 3) ?? [],
+    photo: photoFor(id),
+    tip: card(id)?.mistake,
+    exerciseIds: [id],
+    input: 'done',
+    parts: [],
+  });
+  return {
+    ...base,
+    name: 'The bare minimum',
+    minutes: 10,
+    focus: 'ten minutes that count',
+    kind: 'circuit',
+    order: 'rounds',
+    betweenRoundsSeconds: 60,
+    steps: [
+      station('squat', 'goblet-squat', 'Bodyweight squat', '15 reps', 'No load'),
+      station('push', 'push-ups', 'Push-ups', '10 reps', 'At your level: wall, table, knees or floor'),
+      station('bridge', 'glute-bridge', 'Glute bridge', '15 reps'),
+      station('plank', 'plank', 'Plank', '30 s'),
+    ],
+    coachNote: 'It won\'t make you progress. It will do something more important: it will stop you from stopping.',
+    finisher: '',
+  };
 }
 
 export type VariantResult = {
@@ -242,6 +285,13 @@ const isCore = (st: PlayableStep) => st.exerciseIds.some((id) => card(id)?.famil
 /** Applies a "My week is complicated" case to a session (guide p. 55). */
 export function applyVariant(session: PlayableSession, variant: Variant): VariantResult {
   switch (variant) {
+    case 'tenMin':
+      return {
+        session: bareMinimum(session),
+        adjustments: [],
+        homeOnly: true,
+        banner: { title: 'The bare minimum', message: 'Ten minutes, no equipment, and it counts as today\'s session. You never miss twice in a row.' },
+      };
     case 'short':
       return {
         session: { ...session, steps: session.steps.slice(0, 3), finisher: '' },

@@ -96,8 +96,8 @@ export default function Today() {
         </Txt>
         <View style={styles.heroActions}>
           <CTA label="Start session" tone="light" glyph="play" style={{ flex: 1 }} onPress={() => router.push(`/session/${session.id}`)} />
-          {/* TODO(milestone 3): real 10-minute version from the "My week is complicated" rules. */}
-          <Button label="10-min version" variant="ghost" onPress={() => router.push(`/session/${session.id}`)} />
+          {/* The bare minimum (guide p. 53): counts as today's session. */}
+          <Button label="10-min version" variant="ghost" onPress={() => router.push({ pathname: '/session/[id]', params: { id: session.id, variant: 'tenMin' } })} />
         </View>
       </PhotoHeader>
 
