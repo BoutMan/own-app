@@ -24,6 +24,17 @@ const byFamily: Record<ExerciseFamily, PhotoKey> = {
   prevention: 'greySetStretch',
 };
 
+/**
+ * Demo videos, bundled with the app so sessions work offline (CLAUDE.md, rule 4). Empty until the
+ * shoot: add `'goblet-squat': require('../../assets/videos/goblet-squat.mp4')` as they arrive.
+ * Every screen falls back to the photo while a move has no video.
+ */
+const videos: Partial<Record<string, number>> = {};
+
+export function exerciseVideo(id: string | null | undefined): number | null {
+  return (id && videos[id]) || null;
+}
+
 export function exercisePhoto(id: string, family: ExerciseFamily): PhotoKey {
   return byExercise[id] ?? byFamily[family];
 }

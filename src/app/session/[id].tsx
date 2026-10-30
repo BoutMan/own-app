@@ -27,6 +27,7 @@ import { adjustLoadKg, combinedFactor } from '@/domain/engine/adjustments';
 import { suggestNext, type Suggestion } from '@/domain/engine/plusOne';
 import { getSession, progressionRules, sessionsForWeek } from '@/domain/programme';
 import { formatLoad, stepLoadKg } from '@/domain/units';
+import { DemoVideo, hasDemo } from '@/features/library/DemoVideo';
 import { useProfile } from '@/features/profile/useProfile';
 import { useSeason, useUnits } from '@/features/season/currentWeek';
 import { applyVariant, capSets, isVariant, toPlayable, type LogPart, type PlayableStep } from '@/features/session/playable';
@@ -61,6 +62,7 @@ export default function GuidedSession() {
   const place = useProfile().place;
   const [mode, setMode] = useState<'home' | 'gym'>(place);
   const [gentle, setGentle] = useState(false);
+  const [demo, setDemo] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [inputs, setInputs] = useState<Record<string, Inputs>>({});
   const [toRate, setToRate] = useState<{ setIds: number[]; label: string } | null>(null);
@@ -170,8 +172,12 @@ export default function GuidedSession() {
                   {formatClock(elapsed)}
                 </Txt>
               </View>
-              {/* TODO: demo video with sound once the exercise videos are shot. */}
-              <CircleButton icon="volume" surface="white" accessibilityLabel="Play demo with sound" />
+              {/* Demo with sound once this move's video is bundled; no dead button before that. */}
+              {hasDemo(step.exerciseIds[0]) ? (
+                <CircleButton icon="volume" surface="white" accessibilityLabel="Play demo with sound" onPress={() => setDemo(true)} />
+              ) : (
+                <View style={{ width: 44 }} />
+              )}
             </>
           }
         >
@@ -397,6 +403,9 @@ export default function GuidedSession() {
           ) : null}
         </Gutter>
       </Screen>
+      {step.exerciseIds[0] ? (
+        <DemoVideo exerciseId={step.exerciseIds[0]} title={step.name} poster={step.photo} visible={demo} onClose={() => setDemo(false)} sound />
+      ) : null}
 
       <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
         <Button

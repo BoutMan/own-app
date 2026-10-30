@@ -1,5 +1,5 @@
 import { blocks } from './blocks';
-import type { Block, Session, SessionId, StrengthExercise, WeekNumber, WeekRule } from './types';
+import type { Block, BlockNumber, CircuitExercise, Session, SessionId, StrengthExercise, WeekNumber, WeekRule } from './types';
 import { weekRules } from './weeks';
 
 export * from './baseline';
@@ -58,6 +58,48 @@ export function strengthLineFor(exerciseId: string, block: Block): StrengthExerc
     if (line) return line;
   }
   return undefined;
+}
+
+export type Appearance = {
+  block: BlockNumber;
+  blockName: string;
+  session: string;
+  /** "3 × 10–12 reps" or "Circuit · 40 s". */
+  prescription: string;
+  home?: string;
+  gym?: string;
+  /** Circuits: the easier version to switch to under fatigue. */
+  gentler?: string;
+  note?: string;
+  page: number;
+};
+
+/** Every place a library card appears in the programme, with its home, gym and gentler versions ("See variations"). */
+export function exerciseAppearances(exerciseId: string): Appearance[] {
+  const out: Appearance[] = [];
+  for (const b of blocks) {
+    for (const s of b.sessions) {
+      for (const e of s.exercises) {
+        if (e.exerciseId !== exerciseId) continue;
+        const base = { block: b.number, blockName: b.name, session: `Session ${s.letter} · ${s.name}`, page: s.page };
+        if (s.kind === 'strength') {
+          const x = e as StrengthExercise;
+          out.push({ ...base, prescription: `${x.sets} × ${formatTarget(x.target)}`, ...(x.home ? { home: x.home } : {}), ...(x.gym ? { gym: x.gym } : {}), ...(x.note ? { note: x.note } : {}) });
+        } else {
+          const c = e as CircuitExercise;
+          out.push({
+            ...base,
+            prescription: `Circuit · ${s.format.workSeconds} s`,
+            ...(c.home ? { home: c.home } : {}),
+            ...(c.gym ? { gym: c.gym } : {}),
+            ...(c.gentler ? { gentler: c.gentler } : {}),
+            ...(c.watch ? { note: c.watch } : {}),
+          });
+        }
+      }
+    }
+  }
+  return out;
 }
 
 /** Rounds of a circuit session for a given week. */

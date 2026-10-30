@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 
 import { CircleButton, Heading, Icon, Pill, PlayGlyph, Screen, Tag, Txt } from '@/components';
 import { exercisePhoto, familyLabels } from '@/content/exerciseMedia';
+import { useProfile } from '@/features/profile/useProfile';
 import { exercises, type ExerciseFamily } from '@/content/exercises';
 import { photos } from '@/content/photos';
 import { blockForWeek, exerciseIdsInBlock } from '@/domain/programme';
@@ -19,7 +20,8 @@ const MOVE_OF_THE_WEEK = 'glute-bridge';
 /** 17 · Exercise library — the 35 cards of the guide, search and family filters. */
 export default function Library() {
   const [query, setQuery] = useState('');
-  const [family, setFamily] = useState<ExerciseFamily | 'all'>('all');
+  const [family, setFamily] = useState<ExerciseFamily | 'all' | 'saved'>('all');
+  const { savedExercises } = useProfile();
   const [showAll, setShowAll] = useState(false);
 
   const block = blockForWeek(useCurrentWeek());
@@ -29,11 +31,11 @@ export default function Library() {
     const q = query.trim().toLowerCase();
     return exercises.filter(
       (e) =>
-        (family === 'all' || e.family === family) &&
+        (family === 'all' || e.family === family || (family === 'saved' && savedExercises.includes(e.id))) &&
         (!q || e.name.toLowerCase().includes(q) || e.muscles.some((m) => m.toLowerCase().includes(q))) &&
         (filtering || blockIds.has(e.id)),
     );
-  }, [query, family, filtering, blockIds]);
+  }, [query, family, filtering, blockIds, savedExercises]);
   const motw = exercises.find((e) => e.id === MOVE_OF_THE_WEEK)!;
 
   return (
@@ -64,9 +66,9 @@ export default function Library() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginRight: -20 }} contentContainerStyle={{ gap: 8, paddingRight: 20 }}>
-        {(['all', ...FAMILIES] as const).map((f) => {
+        {(['all', ...(savedExercises.length ? (['saved'] as const) : []), ...FAMILIES] as const).map((f) => {
           const active = family === f;
-          const t = f === 'all' ? null : tones[familyLabels[f].tone];
+          const t = f === 'all' || f === 'saved' ? null : tones[familyLabels[f].tone];
           return (
             <Pressable
               key={f}
@@ -76,7 +78,7 @@ export default function Library() {
               style={[styles.chip, { backgroundColor: active ? colors.ink : t ? t.bg : colors.mist }]}
             >
               <Txt variant="meta" weight={active ? 500 : 400} color={active ? colors.white : t ? t.strong : colors.ink}>
-                {f === 'all' ? 'All' : familyLabels[f].label}
+                {f === 'all' ? 'All' : f === 'saved' ? `Saved · ${savedExercises.length}` : familyLabels[f].label}
               </Txt>
             </Pressable>
           );

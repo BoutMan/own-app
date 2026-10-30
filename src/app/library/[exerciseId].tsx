@@ -1,13 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, CircleButton, Gutter, Heading, Icon, PhotoHeader, Pill, PlayGlyph, Screen, ToneCard, Txt } from '@/components';
 import { exercisePhoto, familyLabels } from '@/content/exerciseMedia';
+import { useQuery } from '@/db/DbProvider';
+import { exerciseHistory } from '@/db/repositories';
+import { DemoVideo, hasDemo } from '@/features/library/DemoVideo';
+import { useProfile, useUpdateProfile } from '@/features/profile/useProfile';
+import { formatLoad } from '@/domain/units';
 import { exercises } from '@/content/exercises';
 import { photos } from '@/content/photos';
-import { blockForWeek, formatTarget, strengthLineFor } from '@/domain/programme';
-import { useCurrentWeek } from '@/features/season/currentWeek';
+import { blockForWeek, exerciseAppearances, formatTarget, strengthLineFor } from '@/domain/programme';
+import { useCurrentWeek, useUnits } from '@/features/season/currentWeek';
 import { colors, radius, tones } from '@/theme';
 
 /** Splits "Single-arm row" into its last word as the accent: one key word per title. */
@@ -23,6 +29,17 @@ export default function ExerciseDetail() {
   const fam = familyLabels[ex.family];
   const inSession = strengthLineFor(ex.id, blockForWeek(useCurrentWeek()));
   const title = ex.name.split(' · ')[0] ?? ex.name;
+  const units = useUnits();
+  const { savedExercises } = useProfile();
+  const update = useUpdateProfile();
+  const saved = savedExercises.includes(ex.id);
+  const [demo, setDemo] = useState(false);
+  const [showVariations, setShowVariations] = useState(false);
+  const variations = exerciseAppearances(ex.id);
+  // Last strength session with this move, and the heaviest load used (reduced-load weeks included).
+  const history = useQuery((db) => exerciseHistory(db, ex.id, 12), [ex.id]);
+  const last = history[0];
+  const best = Math.max(0, ...history.flatMap((h) => h.sets.map((s) => s.loadKg ?? 0)));
 
   return (
     <Screen padTop={false} gap={22}>
@@ -34,8 +51,13 @@ export default function ExerciseDetail() {
         top={
           <>
             <CircleButton icon="chevronLeft" surface="white" accessibilityLabel="Back" onPress={() => router.back()} />
-            {/* TODO: saved moves. */}
-            <CircleButton icon="heart" surface="white" accessibilityLabel="Save move" />
+            <CircleButton
+              icon="heart"
+              surface="white"
+              active={saved}
+              accessibilityLabel={saved ? 'Remove from saved moves' : 'Save move'}
+              onPress={() => update({ savedExercises: saved ? savedExercises.filter((id) => id !== ex.id) : [...savedExercises, ex.id] })}
+            />
           </>
         }
       >
@@ -50,15 +72,23 @@ export default function ExerciseDetail() {
           <Txt variant="body" size={14} color="rgba(255,255,255,0.9)" style={{ flex: 1 }}>
             {ex.muscles.join(' · ') + (inSession ? ` · ${inSession.sets} × ${formatTarget(inSession.target)}` : '')}
           </Txt>
-          {/* Video placeholder until the demos are shot. */}
-          <View style={styles.demo}>
-            <Txt variant="meta" weight={600}>
-              Demo soon
-            </Txt>
-            <View style={styles.demoPlay}>
-              <PlayGlyph size={12} />
+          {/* The demo plays once this move's video is bundled; until then the pill says so. */}
+          {hasDemo(ex.id) ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Watch the demo" onPress={() => setDemo(true)} style={styles.demo}>
+              <Txt variant="meta" weight={600}>
+                Watch the demo
+              </Txt>
+              <View style={styles.demoPlay}>
+                <PlayGlyph size={12} />
+              </View>
+            </Pressable>
+          ) : (
+            <View style={[styles.demo, { paddingRight: 14 }]}>
+              <Txt variant="meta" weight={600}>
+                Demo soon
+              </Txt>
             </View>
-          </View>
+          )}
         </View>
       </PhotoHeader>
 
@@ -103,14 +133,58 @@ export default function ExerciseDetail() {
           <Txt variant="eyebrow" color={tones.fog.soft} style={{ letterSpacing: 0.96 }}>
             Your loads
           </Txt>
-          {/* Filled from logged sets in milestone 3. */}
-          <Txt variant="cardTitle" color={tones.fog.strong}>
-            Your loads appear here after your first session with this move.
-          </Txt>
+          {last ? (
+            <>
+              <Txt variant="cardTitle" color={tones.fog.strong}>
+                {`Last time: ${last.sets.map((s) => (s.reps != null ? `${s.reps}` : `${s.seconds ?? 0} s`)).join(', ')}${
+                  (last.sets[0]?.loadKg ?? 0) > 0 ? ` at ${formatLoad(Math.max(...last.sets.map((s) => s.loadKg ?? 0)), units)}` : ''
+                }`}
+              </Txt>
+              <Txt variant="meta" color={tones.fog.soft}>
+                {best > 0 ? `Heaviest so far: ${formatLoad(best, units)} · ${history.length} ${history.length === 1 ? 'session' : 'sessions'}` : `${history.length} ${history.length === 1 ? 'session' : 'sessions'} logged`}
+              </Txt>
+            </>
+          ) : (
+            <Txt variant="cardTitle" color={tones.fog.strong}>
+              Your loads appear here after your first session with this move.
+            </Txt>
+          )}
         </View>
 
-        {/* TODO(milestone 2): variations come with the programme seed. */}
-        <Button label="See variations" variant="outline" />
+        {variations.length ? (
+          <View style={{ gap: 10 }}>
+            <Button label={showVariations ? 'Hide variations' : 'See variations'} variant="outline" onPress={() => setShowVariations((v) => !v)} />
+            {showVariations
+              ? variations.map((v) => (
+                  <View key={`${v.block}-${v.session}`} style={styles.variation}>
+                    <View style={styles.variationHead}>
+                      <Txt variant="bodyStrong">{`Block ${v.block} · ${v.blockName}`}</Txt>
+                      <Txt variant="small" color={colors.grey}>{`p. ${v.page}`}</Txt>
+                    </View>
+                    <Txt variant="meta" color={colors.grey}>{`${v.session} · ${v.prescription}`}</Txt>
+                    {[
+                      ['Home', v.home],
+                      ['Gym', v.gym],
+                      ['Gentler', v.gentler],
+                      ['Cue', v.note],
+                    ]
+                      .filter((x): x is [string, string] => Boolean(x[1]))
+                      .map(([k, t]) => (
+                        <Txt key={k} variant="small">
+                          <Txt variant="small" weight={600}>{`${k} · `}</Txt>
+                          {t}
+                        </Txt>
+                      ))}
+                  </View>
+                ))
+              : null}
+          </View>
+        ) : (
+          <Txt variant="small" color={colors.grey}>
+            Not in this season's sessions: a move from the guide's library to keep in your pocket.
+          </Txt>
+        )}
+        <DemoVideo exerciseId={ex.id} title={title} poster={exercisePhoto(ex.id, ex.family)} visible={demo} onClose={() => setDemo(false)} />
       </Gutter>
     </Screen>
   );
@@ -123,5 +197,7 @@ const styles = StyleSheet.create({
   versions: { flexDirection: 'row', gap: 8 },
   version: { flex: 1, borderRadius: 22, borderWidth: 1, borderColor: colors.line, padding: 14, gap: 12 },
   versionIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.mist, alignItems: 'center', justifyContent: 'center' },
+  variation: { borderRadius: 22, borderWidth: 1, borderColor: colors.line, padding: 14, gap: 6 },
+  variationHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   loads: { borderRadius: 24, backgroundColor: tones.fog.bg, paddingVertical: 16, paddingHorizontal: 18, gap: 6 },
 });

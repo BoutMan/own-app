@@ -3,6 +3,7 @@ import { describe, expect, it } from '@jest/globals';
 import { exercises } from '@/content/exercises';
 
 import {
+  exerciseAppearances,
   allSessions,
   blockForWeek,
   blocks,
@@ -123,5 +124,14 @@ describe('formatTarget', () => {
     expect(formatTarget({ kind: 'reps', min: 8, max: 8, perSide: 'leg' })).toBe('8 / leg');
     expect(formatTarget({ kind: 'hold', minSeconds: 20, maxSeconds: 30 })).toBe('20–30 s');
     expect(formatTarget({ kind: 'maxMinus', minus: 2 })).toBe('max − 2');
+  });
+});
+
+describe('exercise variations', () => {
+  it('lists every appearance of a move with its versions and pages', () => {
+    const a = exerciseAppearances('goblet-squat');
+    expect(a.length).toBeGreaterThan(0);
+    expect(a.every((x) => x.page > 0 && x.prescription.length > 0)).toBe(true);
+    expect(exerciseAppearances('not-a-move')).toEqual([]);
   });
 });
