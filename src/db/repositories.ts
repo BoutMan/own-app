@@ -257,6 +257,8 @@ export type OnboardingRecord = {
   remindNightBefore: boolean;
   /** Day-0 vault photos taken during onboarding (files already in the app sandbox). */
   photos?: { pose: Pose; fileUri: string }[];
+  /** Contract signature strokes. */
+  signature?: string[] | null;
   /** Monday the season starts, "2026-10-26". */
   startDate: string;
   signedAt: string;
@@ -282,6 +284,7 @@ export function saveOnboarding(db: Db, r: OnboardingRecord): number {
       // Pelvic floor symptoms switch on the grounded versions (spec, health check).
       groundedVersions: pelvic,
       contractSignedAt: r.signedAt,
+      contractSignature: r.signature ?? null,
       onboardedAt: r.signedAt,
     };
     if (existing) tx.update(profile).set(values).where(eq(profile.id, 1)).run();

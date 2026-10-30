@@ -30,6 +30,8 @@ export function useProfile(): Profile & { weekPlan: DayPlan[] } {
     hormonalContraception: false,
     earlyDeloadWeekOf: null,
     contractSignedAt: null,
+    contractSignature: null,
+    savedExercises: [],
     onboardedAt: null,
     createdAt: '',
     ...p,

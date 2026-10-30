@@ -40,6 +40,10 @@ export const profile = sqliteTable('profile', {
   /** Monday (ISO date) of a deload week taken early, after a stall or two signs of overtraining. */
   earlyDeloadWeekOf: text('early_deload_week_of'),
   contractSignedAt: text('contract_signed_at'),
+  /** Finger signature of the contract: SVG path strokes, drawn back on "My contract". */
+  contractSignature: text('contract_signature', { mode: 'json' }).$type<string[]>(),
+  /** Exercise library cards saved with the bookmark ("saved moves"). */
+  savedExercises: text('saved_exercises', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
   onboardedAt: text('onboarded_at'),
   createdAt: timestamp('created_at'),
 });

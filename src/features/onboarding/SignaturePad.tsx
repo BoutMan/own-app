@@ -6,14 +6,16 @@ import { Txt } from '@/components';
 import { colors } from '@/theme';
 
 type SignaturePadProps = {
-  onChange: (signed: boolean) => void;
+  /** Called on each finished stroke with every stroke so far (SVG paths). */
+  onChange: (signed: boolean, strokes: string[]) => void;
   height?: number;
 };
 
-/** Finger signature for the contract. Strokes stay on the device; only "signed" leaves this component. */
+/** Finger signature for the contract. Strokes are kept with the contract, on the device only. */
 export function SignaturePad({ onChange, height = 64 }: SignaturePadProps) {
   const [strokes, setStrokes] = useState<string[]>([]);
   const current = useRef('');
+  const all = useRef<string[]>([]);
 
   const responder = useRef(
     PanResponder.create({
@@ -23,21 +25,23 @@ export function SignaturePad({ onChange, height = 64 }: SignaturePadProps) {
       onPanResponderGrant: (e) => {
         const { locationX: x, locationY: y } = e.nativeEvent;
         current.current = `M${x.toFixed(1)} ${y.toFixed(1)}`;
-        setStrokes((s) => [...s, current.current]);
+        all.current = [...all.current, current.current];
+        setStrokes(all.current);
       },
       onPanResponderMove: (e) => {
         const { locationX: x, locationY: y } = e.nativeEvent;
         current.current += ` L${x.toFixed(1)} ${y.toFixed(1)}`;
-        const d = current.current;
-        setStrokes((s) => [...s.slice(0, -1), d]);
+        all.current = [...all.current.slice(0, -1), current.current];
+        setStrokes(all.current);
       },
-      onPanResponderRelease: () => onChange(true),
+      onPanResponderRelease: () => onChange(true, all.current),
     }),
   ).current;
 
   const clear = () => {
+    all.current = [];
     setStrokes([]);
-    onChange(false);
+    onChange(false, []);
   };
 
   return (

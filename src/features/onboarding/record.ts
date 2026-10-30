@@ -41,6 +41,7 @@ export function toOnboardingRecord(a: OnboardingAnswers, signedAt: Date): Onboar
     addToCalendar: a.addToCalendar,
     remindNightBefore: a.nightBeforeReminder,
     photos: (Object.entries(a.photos) as ['front' | 'side' | 'back', string][]).map(([pose, fileUri]) => ({ pose, fileUri })),
+    signature: a.signature.length ? [...a.signature] : null,
     startDate: isoDate(a.startDate),
     signedAt: signedAt.toISOString(),
   };

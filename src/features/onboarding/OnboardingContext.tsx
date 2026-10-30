@@ -39,6 +39,8 @@ export type OnboardingAnswers = {
   nightBeforeReminder: boolean;
   startDate: Date;
   signed: boolean;
+  /** Signature strokes (SVG paths), kept with the contract on the device. */
+  signature: string[];
   /** Day-0 vault photos already moved into the app's private folder, by pose. */
   photos: Partial<Record<'front' | 'side' | 'back', string>>;
 };
@@ -61,6 +63,7 @@ function initialAnswers(): OnboardingAnswers {
     nightBeforeReminder: true,
     startDate: nextMonday(new Date()),
     signed: false,
+    signature: [],
     photos: {},
   };
 }
